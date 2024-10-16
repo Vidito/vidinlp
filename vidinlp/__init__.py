@@ -41,7 +41,7 @@ class VidinNLP:
         ngram_matrix = vectorizer.fit_transform([' '.join(tokens)])
         ngrams = vectorizer.get_feature_names_out()
         ngram_counts = ngram_matrix.sum(axis=0).A1
-        top_ngrams = sorted(zip(ngrams, ngram_counts), key=lambda x: x[1], reverse=True)[:top_k]
+        top_ngrams = sorted(zip(ngrams, map(int, ngram_counts)), key=lambda x: x[1], reverse=True)[:top_k]
         return top_ngrams
     
     def analyze_sentiment(self, text: str) -> str:
@@ -79,19 +79,19 @@ class VidinNLP:
     def extract_keywords(self, text: str, top_k: int = 10) -> List[Tuple[str, float]]:
         """
         Extract keywords from the input text using TF-IDF and POS tagging.
-        
+
         Args:
         text (str): The input text to extract keywords from.
         top_k (int): The number of top keywords to return.
-        
+
         Returns:
-        List[Tuple[str, float]]: A list of tuples containing keywords and their scores.
+        List[Tuple[str, float]]: A list of tuples containing keywords and their scores, rounded to 2 decimal points.
         """
         doc = self.nlp(text)
         
         # Preprocess text: lemmatize and remove stopwords, punctuation, and non-alphabetic tokens
         processed_text = ' '.join([token.lemma_.lower() for token in doc 
-                                   if not token.is_stop and not token.is_punct and token.is_alpha])
+                                if not token.is_stop and not token.is_punct and token.is_alpha])
         
         # Calculate TF-IDF scores
         tfidf_matrix = self.tfidf_vectorizer.fit_transform([processed_text])
@@ -110,10 +110,11 @@ class VidinNLP:
         
         # Combine TF-IDF and POS scores
         combined_scores = {word: tfidf_scores.get(word, 0) * (1 + 0.1 * pos_scores.get(word, 0)) 
-                           for word in set(tfidf_scores) | set(pos_scores)}
+                        for word in set(tfidf_scores) | set(pos_scores)}
         
-        # Sort and return top k keywords
-        top_keywords = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
+        # Sort and return top k keywords with scores rounded to 2 decimal points
+        top_keywords = sorted([(word, round(float(score), 2)) for word, score in combined_scores.items()],
+                            key=lambda x: x[1], reverse=True)[:top_k]
         
         return top_keywords
 
