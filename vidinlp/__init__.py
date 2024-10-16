@@ -1,15 +1,13 @@
 import spacy
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import joblib
 import os
 from functools import lru_cache
-import numpy as np
-from spacy.lang.en.stop_words import STOP_WORDS
 from collections import Counter
 
 class VidiNLP:
-    def __init__(self, model="en_core_web_sm"):
+    def __init__(self, model="en_core_web_sm", lexicon_path='lexicon.txt'):
         self.nlp = spacy.load(model)
         
         # Load pre-trained sentiment model
@@ -19,6 +17,9 @@ class VidiNLP:
 
         # Initialize TF-IDF vectorizer for keyword extraction
         self.tfidf_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1, 2))
+        
+        # Load NRC Emotion Lexicon for emotion detection
+        self.emotion_lexicon = self.load_nrc_emotion_lexicon(lexicon_path)
         
     def tokenize(self, text: str) -> List[str]:
         """Tokenize the input text."""
@@ -41,6 +42,7 @@ class VidiNLP:
         ngram_matrix = vectorizer.fit_transform([' '.join(tokens)])
         ngrams = vectorizer.get_feature_names_out()
         ngram_counts = ngram_matrix.sum(axis=0).A1
+        # Ensure integers are properly formatted and use map to convert to native int
         top_ngrams = sorted(zip(ngrams, map(int, ngram_counts)), key=lambda x: x[1], reverse=True)[:top_k]
         return top_ngrams
     
@@ -91,7 +93,7 @@ class VidiNLP:
         
         # Preprocess text: lemmatize and remove stopwords, punctuation, and non-alphabetic tokens
         processed_text = ' '.join([token.lemma_.lower() for token in doc 
-                                if not token.is_stop and not token.is_punct and token.is_alpha])
+                                   if not token.is_stop and not token.is_punct and token.is_alpha])
         
         # Calculate TF-IDF scores
         tfidf_matrix = self.tfidf_vectorizer.fit_transform([processed_text])
@@ -110,13 +112,53 @@ class VidiNLP:
         
         # Combine TF-IDF and POS scores
         combined_scores = {word: tfidf_scores.get(word, 0) * (1 + 0.1 * pos_scores.get(word, 0)) 
-                        for word in set(tfidf_scores) | set(pos_scores)}
+                           for word in set(tfidf_scores) | set(pos_scores)}
         
         # Sort and return top k keywords with scores rounded to 2 decimal points
         top_keywords = sorted([(word, round(float(score), 2)) for word, score in combined_scores.items()],
-                            key=lambda x: x[1], reverse=True)[:top_k]
+                              key=lambda x: x[1], reverse=True)[:top_k]
         
         return top_keywords
+    
+    def load_nrc_emotion_lexicon(self, lexicon_path: str) -> Dict[str, Dict[str, int]]:
+        """
+        Load the NRC Emotion Lexicon into a dictionary.
+
+        Args:
+        lexicon_path (str): Path to the NRC Emotion Lexicon file.
+
+        Returns:
+        Dict[str, Dict[str, int]]: A dictionary mapping words to emotions and their respective scores (1 or 0).
+        """
+        lexicon = {}
+        with open(lexicon_path, 'r') as file:
+            for line in file:
+                word, emotion, score = line.strip().split('\t')
+                if word not in lexicon:
+                    lexicon[word] = {}
+                lexicon[word][emotion] = int(score)
+        return lexicon
+
+    def analyze_emotions(self, text: str) -> Dict[str, int]:
+        """
+        Analyze the emotions in the input text using the NRC Emotion Lexicon.
+
+        Args:
+        text (str): The input text to analyze emotions from.
+
+        Returns:
+        Dict[str, int]: A dictionary of emotions and their respective scores.
+        """
+        doc = self.nlp(text)
+        emotion_scores = Counter()
+
+        for token in doc:
+            lemma = token.lemma_.lower()
+            if lemma in self.emotion_lexicon:
+                for emotion, score in self.emotion_lexicon[lemma].items():
+                    emotion_scores[emotion] += score
+
+        return dict(emotion_scores)
 
 # Additional utility function
 @lru_cache(maxsize=1)
