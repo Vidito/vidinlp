@@ -17,10 +17,10 @@ pip install .
 # Download spaCy model
 # python -m spacy download en_core_web_sm
 
-from vidinlp import VidinNLP
+from vidinlp import VidiNLP
 
-# Initialize the VidinNLP object
-nlp = VidinNLP()
+# Initialize the VidiNLP object
+nlp = VidiNLP()
 
 # Tokenization
 tokens = nlp.tokenize("Hello, world!")
