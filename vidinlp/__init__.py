@@ -8,7 +8,7 @@ import numpy as np
 from spacy.lang.en.stop_words import STOP_WORDS
 from collections import Counter
 
-class VidinNLP:
+class VidiNLP:
     def __init__(self, model="en_core_web_sm"):
         self.nlp = spacy.load(model)
         
