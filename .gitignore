@@ -3,7 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-*.joblib
 .Python
 build/
 develop-eggs/
@@ -24,3 +23,4 @@ MANIFEST
 .venv/
 venv/
 ENV/
+*.csv
