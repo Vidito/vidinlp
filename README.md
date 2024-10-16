@@ -5,13 +5,16 @@ VidinNLP is a simple, modern, and fast NLP library built on top of spaCy. It pro
 ## Installation
 
 ```
-pip install vidinlp
+git clone https://github.com/Vidito/vidinlp.git
+cd vidinlp
+pip install .
+
 ```
 
 ## Usage
 
 ```python
-# Download spavy model
+# Download spaCy model
 # python -m spacy download en_core_web_sm
 
 from vidinlp import VidinNLP
