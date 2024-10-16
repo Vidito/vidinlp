@@ -1,6 +1,6 @@
-# VidinNLP
+# VidiNLP
 
-VidinNLP is a simple, modern, and fast NLP library built on top of spaCy. It provides easy-to-use functions for common NLP tasks such as tokenization, lemmatization, n-gram extraction, sentiment analysis, text cleaning, and keyword extraction.
+VidiNLP is a simple, modern, and fast NLP library built on top of spaCy. It provides easy-to-use functions for common NLP tasks such as tokenization, lemmatization, n-gram extraction, sentiment analysis, text cleaning, and keyword extraction.
 
 ## Installation
 
