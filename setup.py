@@ -10,6 +10,8 @@ setup(
         "scikit-learn",
         "joblib",
         "pandas",
+        "imblearn",
+        "numpy"
     ],
     package_data={
         "vidinlp": ["best_sentiment_pipeline_calibrated.joblib", "vectorizer_svm.joblib"],
