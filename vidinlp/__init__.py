@@ -5,6 +5,7 @@ import joblib
 import os
 from functools import lru_cache
 from collections import Counter
+import re
 
 class VidiNLP:
     def __init__(self, model="en_core_web_sm", lexicon_path='lexicon.txt'):
@@ -69,6 +70,8 @@ class VidiNLP:
     
     def clean_text(self, text: str) -> str:
         """Clean and preprocess the input text."""
+        text = re.sub(r'<[^>]+>', '', text)
+        text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces 
         doc = self.nlp(text)
         cleaned_tokens = [token.text.lower() for token in doc if not token.is_punct and not token.is_space]
         return ' '.join(cleaned_tokens)
