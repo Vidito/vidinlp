@@ -158,7 +158,7 @@ class VidiNLP:
                 for emotion, score in self.emotion_lexicon[lemma].items():
                     emotion_scores[emotion] += score
 
-        return dict(emotion_scores)
+        return dict(sorted(emotion_scores.items(), key=lambda item: item[1], reverse=True))
 
 # Additional utility function
 @lru_cache(maxsize=1)
