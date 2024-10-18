@@ -68,13 +68,39 @@ class VidiNLP:
         
         return result
     
-    def clean_text(self, text: str) -> str:
-        """Clean and preprocess the input text."""
-        text = re.sub(r'<[^>]+>', '', text)
-        text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces 
+
+    def clean_text(self, text: str, is_stop: bool = False, is_alpha: bool = False, is_punct: bool = False, is_num: bool = False, is_html: bool =False) -> str:
+        """Clean and preprocess the input text with optional filters."""
+        
+        # Remove HTML tags
+        if is_html:
+            text = re.sub(r'<[^>]+>', '', text)
+        
+        # Remove extra spaces
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        # Process the text with the NLP model
         doc = self.nlp(text)
-        cleaned_tokens = [token.text.lower() for token in doc if not token.is_punct and not token.is_space]
+        
+        # Clean tokens based on the provided options
+        cleaned_tokens = []
+        
+        for token in doc:
+            if is_punct and token.is_punct:
+                continue  # Skip punctuation if is_punct is True
+            if is_stop and token.is_stop:
+                continue  # Skip stopwords if is_stop is True
+            if is_alpha and not token.is_alpha:
+                continue  # Skip non-alphabetic words if is_alpha is True
+            if is_num and token.like_num:
+                continue  # Skip numbers if is_num is True
+            
+            # Add the cleaned token (lowercased)
+            cleaned_tokens.append(token.text.lower())
+        
+        # Return the cleaned text as a single string
         return ' '.join(cleaned_tokens)
+
 
     def get_named_entities(self, text: str) -> List[Tuple[str, str]]:
         """Extract named entities from the input text."""
