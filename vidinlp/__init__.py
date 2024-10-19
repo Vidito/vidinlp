@@ -261,7 +261,7 @@ class VidiNLP:
 
         Returns:
         Dict[str, Dict[str, Any]]: A dictionary where keys are aspects and values are dictionaries
-                                   containing sentiment scores, confidence, and the associated text snippet.
+                                containing sentiment scores, confidence, and the associated text snippet.
         """
         doc = self.nlp(text)
         aspects = defaultdict(list)
@@ -271,8 +271,7 @@ class VidiNLP:
             if token.pos_ == "NOUN" or token.dep_ == "compound":
                 for child in token.children:
                     if child.dep_ in ["amod", "nsubj", "prep"]:
-                        aspects[token.text].append(child.text)
-
+                        aspects[token.text].append((child.text, child.i))
 
         # Analyze sentiment for each aspect
         results = {}
@@ -280,12 +279,15 @@ class VidiNLP:
             sentiment_scores = []
             confidence_scores = []
             snippets = []
+
             for descriptor, idx in descriptors:
-                # Get the relevant part of the text (5 words before and after the descriptor)
+                # Find the sentence that contains the descriptor token
+                relevant_text = ""
                 for sent in doc.sents:
-                    if token in sent:
+                    if doc[idx] in sent:
                         relevant_text = sent.text
                         break
+
                 # Analyze sentiment using custom method
                 sentiment_label, confidence = self.analyze_sentiment(relevant_text)
                 
@@ -305,6 +307,7 @@ class VidiNLP:
             }
 
         return results
+
 
 
     def _sentiment_to_score(self, sentiment: str) -> float:
