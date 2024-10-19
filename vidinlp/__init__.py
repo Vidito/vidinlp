@@ -256,43 +256,53 @@ class VidiNLP:
 
         # Extract aspects (nouns) and their associated descriptors
         for token in doc:
-            if token.pos_ == "NOUN" or token.dep_ == "compound":
+            # Check if the token is a noun (aspect)
+            if token.pos_ == "NOUN":
+                # Check for adjectives or adverbs (modifiers) directly linked to the noun
                 for child in token.children:
-                    if child.dep_ in ["amod", "nsubj", "prep"]:
-                        aspects[token.text].append(child.text)
+                    if child.dep_ in ["amod", "advmod", "nsubj", "attr", "prep"]:
+                        aspects[token.text].append((child.text, token.sent))
 
         # Analyze sentiment for each aspect
         results = {}
-        for aspect, descriptors in aspects.items():
+
+        for aspect, modifiers_and_sentences in aspects.items():
             sentiment_scores = []
             confidence_scores = []
             snippets = []
-            for descriptor in descriptors:
-                # Find the sentence containing the descriptor
+
+            if modifiers_and_sentences:  # If there are modifiers for the aspect
+                for modifier, sentence in modifiers_and_sentences:
+                    # Create a phrase with the aspect and modifier (e.g., "terrible sound")
+                    phrase = f"{modifier} {aspect}"
+                    
+                    # Analyze sentiment of the phrase
+                    sentiment = self.analyze_sentiment(phrase)
+                    
+                    sentiment_scores.append(sentiment['compound'])
+                    confidence_scores.append(sentiment['compound'])  # Treat compound score as confidence
+                    
+                    snippets.append(phrase)
+            else:  # If no modifiers, analyze the sentiment of the sentence
                 for sent in doc.sents:
-                    if descriptor in sent.text:
-                        relevant_text = sent.text
+                    if aspect in sent.text:
+                        sentence_text = sent.text
+                        sentiment = self.analyze_sentiment(sentence_text)
+                        sentiment_scores.append(sentiment['compound'])
+                        confidence_scores.append(sentiment['compound'])  # Treat compound score as confidence
+                        snippets.append(sentence_text)
                         break
-                
-                # Analyze sentiment using custom method
-                sentiment_dict = self.analyze_sentiment(relevant_text)
-                sentiment_label = sentiment_dict['compound']  # Using 'compound' as overall sentiment score
-                confidence = max(sentiment_dict['pos'], sentiment_dict['neg'], sentiment_dict['neu'])  # Confidence based on strongest sentiment
-                
-                sentiment_scores.append(sentiment_label)
-                confidence_scores.append(confidence)
-                snippets.append(relevant_text)
-
-            # Calculate average sentiment and confidence for the aspect
-            avg_sentiment = sum(s * c for s, c in zip(sentiment_scores, confidence_scores)) / sum(confidence_scores)
+            
+            # Average sentiment and confidence for the aspect
+            avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0
             avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
-
+            
             results[aspect] = {
                 'sentiment': avg_sentiment,
                 'confidence': avg_confidence,
                 'snippets': snippets
             }
-
+        
         return results
 
 
