@@ -1,6 +1,17 @@
 # VidiNLP
 
-VidiNLP is a simple, modern, and fast NLP library built on top of spaCy. It provides easy-to-use functions for common NLP tasks such as tokenization, lemmatization, n-gram extraction, sentiment analysis, text cleaning, keyword extraction, emotion analysis, topic modelling, document similarity.
+VidiNLP is a simple, modern, and fast NLP library built on top of spaCy. It also uses Gensim for Topic Modelling, and Vader for sentiment analysis. VidiNLP provides easy-to-use functions for common NLP tasks such as
+
+- Tokenization
+- Lemmatization
+- n-gram extraction
+- Sentiment analysis
+- Aspect based sentment analysis
+- Text cleaning
+- Keyword extraction
+- Emotion analysis
+- Topic modelling
+- Document similarity
 
 VidiNLP was built by Dr. Vahid Niamadpour, an applied linguist based in Norway, as a hobby.
 
@@ -32,14 +43,26 @@ tokens = nlp.tokenize(text)
 # Lemmatization
 lemmas = nlp.lemmatize(text)
 
-# N-grams. By defaulr the top five bigrams are returned.
-ngrams = nlp.get_ngrams(text, n=2, top_k=5)
-
-# Sentiment Analysis (pre-trained model). Example output: "The sentiment is 'Positive' with a confidence of 93%."
-sentiment = nlp.analyze_sentiment(text)
-
 # Text cleaning: set the arguments you want to be removed from text to True
 cleaned_text = nlp.clean_text(text, is_stop = False, is_alpha = False, is_punct = False, is_num = False, is_html = False)
+
+# N-grams. By default the top five bigrams are returned.
+ngrams = nlp.get_ngrams(text, n=2, top_k=5)
+
+# Sentiment Analysis (pre-trained model). Example output:
+sentiment = nlp.analyze_sentiment(text)
+print(sentiment) # {'neg': 0.228, 'neu': 0.345, 'pos': 0.427, 'compound': 0.7777}
+print(sentiment['compound']) # 0.7777 you can consider numbers above 0.25 positive, below -0.25 negative, and in between neutral
+
+# Aspect related sentiment analysis
+absa = nlp.aspect_based_sentiment_analysis('The phone has a terrible camera.') # returns a dictionary
+print(absa)
+# {'phone': {'sentiment': -0.4767, 'confidence': 0.4767, 'snippets': ['\nThe phone has a terrible camera.\n']}, 'camera': {'sentiment': -0.4767, 'confidence': 0.4767, 'snippets': ['terrible camera']}}
+
+summary = nlp.summarize_absa_results(absa) # returns a reader friendly format
+print(summary)
+# The aspect 'phone' has a negative sentiment with a confidence of 0.48.
+# The aspect 'camera' has a negative sentiment with a confidence of 0.48.
 
 # Named Entity Recognition. Detects the names of people, cities, countries, or numbers, dates,...
 entities = nlp.get_named_entities("Apple is looking at buying U.K. startup for $1 billion")
@@ -64,10 +87,6 @@ similarity = nlp.compute_document_similarity("First document", "Second document"
 # Finds the top N most similar documents to a query document from a list of documents.
 similar_docs = nlp.find_similar_documents("Query document", ["Doc1", "Doc2", "Doc3"], top_n=2)
 
-
-# Aspect related sentiment analysis
-review = nlp.aspect_based_sentiment_analysis(text) # returns a dictionary
-summary = nlp.summarize_absa_results(review) # returns reader friendly format
 ```
 
 For more detailed usage instructions and examples, please refer to the documentation.
