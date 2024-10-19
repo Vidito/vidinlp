@@ -23,21 +23,24 @@ class VidiNLP:
         self.emotion_lexicon = self.load_nrc_emotion_lexicon(lexicon_path)
         
     def tokenize(self, text: str) -> List[str]:
-        """Tokenize the input text."""
+        """Tokenize the input text and returns a list of tokens."""
         doc = self.nlp(text)
         return [token.text for token in doc]
     
     def lemmatize(self, text: str) -> List[str]:
-        """Lemmatize the input text."""
+        """Lemmatize the input text and returns a list of lemmatized words."""
         doc = self.nlp(text)
         return [token.lemma_ for token in doc]
     
     def pos_tag(self, text: str) -> List[Tuple[str, str]]:
+        """Returns a list of tuples wit the token and its part of speech tag."""
         doc = self.nlp(text)
         return [(token.text, token.pos_) for token in doc]
     
     def get_ngrams(self, text: str, n: int, top_k: int = 10) -> List[Tuple[str, int]]:
-        """Get top-k n-grams from the input text."""
+        """Get top-k n-grams from the input text.
+        Args: text: str, n: int, top_k: int = 10
+        """
         tokens = self.tokenize(text)
         vectorizer = CountVectorizer(ngram_range=(n, n))
         ngram_matrix = vectorizer.fit_transform([' '.join(tokens)])
@@ -70,7 +73,9 @@ class VidiNLP:
     
 
     def clean_text(self, text: str, is_stop: bool = False, is_alpha: bool = False, is_punct: bool = False, is_num: bool = False, is_html: bool =False) -> str:
-        """Clean and preprocess the input text with optional filters."""
+        """Clean and preprocess the input text with optional filters.
+        Args: is_stop: bool = False, is_alpha: bool = False, is_punct: bool = False, is_num: bool = False, is_html: bool = False
+        """
         
         # Remove HTML tags
         if is_html:
@@ -103,7 +108,7 @@ class VidiNLP:
 
 
     def get_named_entities(self, text: str) -> List[Tuple[str, str]]:
-        """Extract named entities from the input text."""
+        """Extract named entities from the input text and returns a list of tuples with entities and labels."""
         doc = self.nlp(text)
         return [(ent.text, ent.label_) for ent in doc.ents]
 
