@@ -284,7 +284,7 @@ class VidiNLP:
                 snippets.append(relevant_text)
 
             # Calculate average sentiment and confidence for the aspect
-            avg_sentiment = sum(s * c for s, c in zip(s entiment_scores, confidence_scores)) / sum(confidence_scores)
+            avg_sentiment = sum(s * c for s, c in zip(sentiment_scores, confidence_scores)) / sum(confidence_scores)
             avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
 
             results[aspect] = {
