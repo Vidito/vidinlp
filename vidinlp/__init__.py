@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import joblib
 import os
 from functools import lru_cache
-from collections import Counter
+from collections import Counter, defaultdict
 import re
 
 class VidiNLP:
@@ -259,6 +259,105 @@ class VidiNLP:
         
         # Return list of tuples (document index, similarity score)
         return [(idx, cosine_similarities[idx]) for idx in similar_doc_indices]
+    
+    def aspect_based_sentiment_analysis(self, text: str) -> Dict[str, Dict[str, float]]:
+        """
+        Perform aspect-based sentiment analysis on the input text using custom sentiment analysis.
+
+        Args:
+        text (str): The input text to analyze.
+
+        Returns:
+        Dict[str, Dict[str, Any]]: A dictionary where keys are aspects and values are dictionaries
+                                   containing sentiment scores, confidence, and the associated text snippet.
+        """
+        doc = self.nlp(text)
+        aspects = defaultdict(list)
+
+        # Extract aspects (nouns) and their associated descriptors
+        for token in doc:
+            if token.pos_ in ['NOUN', 'PROPN']:
+                # Look for adjectives or verbs connected to the noun
+                for child in token.children:
+                    if child.pos_ in ['ADJ', 'VERB']:
+                        aspect = token.text.lower()
+                        descriptor = child.text.lower()
+                        aspects[aspect].append((descriptor, child.i))
+
+        # Analyze sentiment for each aspect
+        results = {}
+        for aspect, descriptors in aspects.items():
+            sentiment_scores = []
+            confidence_scores = []
+            snippets = []
+            for descriptor, idx in descriptors:
+                # Get the relevant part of the text (5 words before and after the descriptor)
+                start = max(0, idx - 5)
+                end = min(len(doc), idx + 6)
+                relevant_text = doc[start:end].text
+                
+                # Analyze sentiment using custom method
+                sentiment_result = self.analyze_sentiment(relevant_text)
+                
+                # Parse the sentiment result
+                sentiment_label, confidence = self._parse_sentiment_result(sentiment_result)
+                
+                sentiment_scores.append(self._sentiment_to_score(sentiment_label))
+                confidence_scores.append(confidence)
+                snippets.append(relevant_text)
+
+            # Calculate average sentiment and confidence for the aspect
+            avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0
+            avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
+
+            results[aspect] = {
+                'sentiment': avg_sentiment,
+                'confidence': avg_confidence,
+                'snippets': snippets
+            }
+
+        return results
+
+    def _parse_sentiment_result(self, result: str) -> Tuple[str, float]:
+        """Parse the sentiment result string to extract label and confidence."""
+        import re
+        match = re.search(r"sentiment is '(\w+)' with a confidence of ([\d.]+)%", result)
+        if match:
+            label, confidence = match.groups()
+            return label, float(confidence) / 100
+        return "Neutral", 0.0
+
+    def _sentiment_to_score(self, sentiment: str) -> float:
+        """Convert sentiment label to a numerical score."""
+        sentiment_map = {"Positive": 1.0, "Negative": -1.0, "Neutral": 0.0}
+        return sentiment_map.get(sentiment, 0.0)
+
+    def summarize_absa_results(self, results: Dict[str, Dict[str, Any]]) -> str:
+        """
+        Summarize the results of aspect-based sentiment analysis.
+
+        Args:
+        results (Dict[str, Dict[str, Any]]): The results from aspect_based_sentiment_analysis.
+
+        Returns:
+        str: A human-readable summary of the aspect-based sentiment analysis.
+        """
+        summary = "Aspect-Based Sentiment Analysis Summary:\n\n"
+        for aspect, data in results.items():
+            sentiment_score = data['sentiment']
+            confidence = data['confidence']
+            snippets = data['snippets']
+            
+            sentiment_label = "Positive" if sentiment_score > 0 else "Negative" if sentiment_score < 0 else "Neutral"
+            
+            summary += f"Aspect: {aspect}\n"
+            summary += f"Overall Sentiment: {sentiment_label} (Score: {sentiment_score:.2f}, Confidence: {confidence:.2f})\n"
+            summary += "Relevant text snippets:\n"
+            for snippet in snippets:
+                summary += f"- \"{snippet}\"\n"
+            summary += "\n"
+        
+        return summary
 # Additional utility function
 @lru_cache(maxsize=1)
 def load_spacy_model(model_name: str):
