@@ -259,7 +259,7 @@ class VidiNLP:
             if token.pos_ == "NOUN" or token.dep_ == "compound":
                 for child in token.children:
                     if child.dep_ in ["amod", "nsubj", "prep"]:
-                        aspects[token.text].append((child.text, child.i))
+                        aspects[token.text].append(child.text)
 
         # Analyze sentiment for each aspect
         results = {}
@@ -267,25 +267,24 @@ class VidiNLP:
             sentiment_scores = []
             confidence_scores = []
             snippets = []
-
-            for descriptor, idx in descriptors:
-                # Find the sentence that contains the descriptor token
-                relevant_text = ""
+            for descriptor in descriptors:
+                # Find the sentence containing the descriptor
                 for sent in doc.sents:
-                    if doc[idx] in sent:
+                    if descriptor in sent.text:
                         relevant_text = sent.text
                         break
-
-                # Analyze sentiment using custom method
-                sentiment_label, confidence = self.analyze_sentiment(relevant_text)
                 
-                sentiment_scores.append(self._sentiment_to_score(sentiment_label))
+                # Analyze sentiment using custom method
+                sentiment_dict = self.analyze_sentiment(relevant_text)
+                sentiment_label = sentiment_dict['compound']  # Using 'compound' as overall sentiment score
+                confidence = max(sentiment_dict['pos'], sentiment_dict['neg'], sentiment_dict['neu'])  # Confidence based on strongest sentiment
+                
+                sentiment_scores.append(sentiment_label)
                 confidence_scores.append(confidence)
                 snippets.append(relevant_text)
 
             # Calculate average sentiment and confidence for the aspect
             avg_sentiment = sum(s * c for s, c in zip(sentiment_scores, confidence_scores)) / sum(confidence_scores)
-
             avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
 
             results[aspect] = {
@@ -295,6 +294,7 @@ class VidiNLP:
             }
 
         return results
+
 
 
     def summarize_absa_results(self, results: Dict[str, Dict[str, Any]]) -> str:
