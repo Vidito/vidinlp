@@ -63,6 +63,11 @@ similarity = nlp.compute_document_similarity("First document", "Second document"
 
 # Finds the top N most similar documents to a query document from a list of documents.
 similar_docs = nlp.find_similar_documents("Query document", ["Doc1", "Doc2", "Doc3"], top_n=2)
+
+
+# Aspect related sentiment analysis
+review = nlp.aspect_based_sentiment_analysis(text) # returns a dictionary
+summary = nlp.summarize_absa_results(review) # returns reader friendly format
 ```
 
 For more detailed usage instructions and examples, please refer to the documentation.
