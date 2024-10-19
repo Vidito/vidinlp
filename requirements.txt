@@ -5,3 +5,4 @@ pandas
 imblearn
 numpy
 gensim-4.3.3
+vaderSentiment

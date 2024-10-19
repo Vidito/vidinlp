@@ -4,23 +4,19 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import gensim
 from gensim import corpora
 from sklearn.metrics.pairwise import cosine_similarity
-import joblib
-import os
 from functools import lru_cache
 from collections import Counter, defaultdict
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import re
 
 class VidiNLP:
     def __init__(self, model="en_core_web_sm", lexicon_path='lexicon.txt'):
         self.nlp = spacy.load(model)
+        self.sia = SentimentIntensityAnalyzer()
         # Initialize attributes for topic modeling
         self.dictionary = None
         self.lda_model = None
         
-        # Load pre-trained sentiment model
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        pipeline_path = os.path.join(current_dir, 'best_sentiment_pipeline_calibrated.joblib')
-        self.sentiment_pipeline = joblib.load(pipeline_path)
 
         # Initialize TF-IDF vectorizer for keyword extraction
         self.tfidf_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1, 2))
@@ -56,18 +52,9 @@ class VidiNLP:
         top_ngrams = sorted(zip(ngrams, map(int, ngram_counts)), key=lambda x: x[1], reverse=True)[:top_k]
         return top_ngrams
     
-    def analyze_sentiment(self, text: str) -> str:
-        """Analyze the sentiment of the input text and return a human-readable result."""
-        
-        # Check if the sentiment_pipeline is correctly loaded
-        if not hasattr(self, 'sentiment_pipeline') or not callable(getattr(self.sentiment_pipeline, 'predict', None)):
-            raise ValueError("The sentiment_pipeline is not correctly initialized.")
-
-        # Predict sentiment label
-        sentiment = self.sentiment_pipeline.predict([text])[0]
-        probas = self.sentiment_pipeline.predict_proba([text])[0]
-        confidence_score = max(probas)
-        return sentiment, confidence_score
+    def analyze_sentiment(self, text: str) -> Dict[str, float]:
+            """Analyze the sentiment of the input text using VADER."""
+            return self.sia.polarity_scores(text)
     
 
     def clean_text(self, text: str, is_stop: bool = False, is_alpha: bool = False, is_punct: bool = False, is_num: bool = False, is_html: bool =False) -> str:
@@ -252,68 +239,59 @@ class VidiNLP:
         # Return list of tuples (document index, similarity score)
         return [(idx, cosine_similarities[idx]) for idx in similar_doc_indices]
     
-    def aspect_based_sentiment_analysis(self, text: str) -> Dict[str, Dict[str, float]]:
+    def aspect_based_sentiment_analysis(self, text: str) -> Dict[str, Dict[str, Any]]:
         """
-        Perform aspect-based sentiment analysis on the input text using custom sentiment analysis.
+        Perform aspect-based sentiment analysis on the input text using VADER.
 
         Args:
         text (str): The input text to analyze.
 
         Returns:
         Dict[str, Dict[str, Any]]: A dictionary where keys are aspects and values are dictionaries
-                                containing sentiment scores, confidence, and the associated text snippet.
+                                   containing sentiment scores and the associated text snippets.
         """
         doc = self.nlp(text)
         aspects = defaultdict(list)
 
         # Extract aspects (nouns) and their associated descriptors
         for token in doc:
-            if token.pos_ == "NOUN" or token.dep_ == "compound":
+            if token.pos_ in ['NOUN', 'PROPN']:
+                # Look for adjectives or verbs connected to the noun
                 for child in token.children:
-                    if child.dep_ in ["amod", "nsubj", "prep"]:
-                        aspects[token.text].append((child.text, child.i))
+                    if child.pos_ in ['ADJ', 'VERB']:
+                        aspect = token.text.lower()
+                        descriptor = child.text.lower()
+                        aspects[aspect].append((descriptor, child.i))
 
         # Analyze sentiment for each aspect
         results = {}
         for aspect, descriptors in aspects.items():
             sentiment_scores = []
-            confidence_scores = []
             snippets = []
-
             for descriptor, idx in descriptors:
-                # Find the sentence that contains the descriptor token
-                relevant_text = ""
-                for sent in doc.sents:
-                    if doc[idx] in sent:
-                        relevant_text = sent.text
-                        break
-
-                # Analyze sentiment using custom method
-                sentiment_label, confidence = self.analyze_sentiment(relevant_text)
+                # Get the relevant part of the text (5 words before and after the descriptor)
+                start = max(0, idx - 5)
+                end = min(len(doc), idx + 6)
+                relevant_text = doc[start:end].text
                 
-                sentiment_scores.append(self._sentiment_to_score(sentiment_label))
-                confidence_scores.append(confidence)
+                # Analyze sentiment using VADER
+                sentiment_scores.append(self.analyze_sentiment(relevant_text))
                 snippets.append(relevant_text)
 
-            # Calculate average sentiment and confidence for the aspect
-            avg_sentiment = sum(s * c for s, c in zip(sentiment_scores, confidence_scores)) / sum(confidence_scores)
-
-            avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
+            # Calculate average sentiment for the aspect
+            avg_sentiment = {
+                'compound': sum(score['compound'] for score in sentiment_scores) / len(sentiment_scores),
+                'pos': sum(score['pos'] for score in sentiment_scores) / len(sentiment_scores),
+                'neu': sum(score['neu'] for score in sentiment_scores) / len(sentiment_scores),
+                'neg': sum(score['neg'] for score in sentiment_scores) / len(sentiment_scores)
+            }
 
             results[aspect] = {
                 'sentiment': avg_sentiment,
-                'confidence': avg_confidence,
                 'snippets': snippets
             }
 
         return results
-
-
-
-    def _sentiment_to_score(self, sentiment: str) -> float:
-        """Convert sentiment label to a numerical score."""
-        sentiment_map = {"Positive": 1.0, "Negative": -1.0, "Neutral": 0.0}
-        return sentiment_map.get(sentiment, 0.0)
 
     def summarize_absa_results(self, results: Dict[str, Dict[str, Any]]) -> str:
         """
@@ -327,14 +305,20 @@ class VidiNLP:
         """
         summary = "Aspect-Based Sentiment Analysis Summary:\n\n"
         for aspect, data in results.items():
-            sentiment_score = data['sentiment']
-            confidence = data['confidence']
+            sentiment = data['sentiment']
             snippets = data['snippets']
             
-            sentiment_label = "Positive" if sentiment_score > 0 else "Negative" if sentiment_score < 0 else "Neutral"
+            compound_score = sentiment['compound']
+            if compound_score >= 0.05:
+                sentiment_label = "Positive"
+            elif compound_score <= -0.05:
+                sentiment_label = "Negative"
+            else:
+                sentiment_label = "Neutral"
             
             summary += f"Aspect: {aspect}\n"
-            summary += f"Overall Sentiment: {sentiment_label} (Score: {sentiment_score:.2f}, Confidence: {confidence:.2f})\n"
+            summary += f"Overall Sentiment: {sentiment_label} (Compound: {compound_score:.2f})\n"
+            summary += f"Positive: {sentiment['pos']:.2f}, Neutral: {sentiment['neu']:.2f}, Negative: {sentiment['neg']:.2f}\n"
             summary += "Relevant text snippets:\n"
             for snippet in snippets:
                 summary += f"- \"{snippet}\"\n"
