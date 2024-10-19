@@ -284,7 +284,7 @@ class VidiNLP:
                 snippets.append(relevant_text)
 
             # Calculate average sentiment and confidence for the aspect
-            avg_sentiment = sum(s * c for s, c in zip(sentiment_scores, confidence_scores)) / sum(confidence_scores)
+            avg_sentiment = sum(s * c for s, c in zip(s entiment_scores, confidence_scores)) / sum(confidence_scores)
             avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
 
             results[aspect] = {
@@ -297,38 +297,35 @@ class VidiNLP:
 
 
 
-    def summarize_absa_results(self, results: Dict[str, Dict[str, Any]]) -> str:
+    def summarize_absa_results(self, absa_results: Dict[str, Dict[str, float]]) -> str:
         """
-        Summarize the results of aspect-based sentiment analysis.
+        Summarize the aspect-based sentiment analysis results into a human-readable format.
 
         Args:
-        results (Dict[str, Dict[str, Any]]): The results from aspect_based_sentiment_analysis.
+        absa_results (Dict[str, Dict[str, float]]): The aspect-based sentiment analysis results.
 
         Returns:
-        str: A human-readable summary of the aspect-based sentiment analysis.
+        str: A summary of the results.
         """
-        summary = "Aspect-Based Sentiment Analysis Summary:\n\n"
-        for aspect, data in results.items():
-            sentiment = data['sentiment']
-            snippets = data['snippets']
-            
-            compound_score = sentiment['compound']
-            if compound_score >= 0.05:
-                sentiment_label = "Positive"
-            elif compound_score <= -0.05:
-                sentiment_label = "Negative"
-            else:
-                sentiment_label = "Neutral"
-            
-            summary += f"Aspect: {aspect}\n"
-            summary += f"Overall Sentiment: {sentiment_label} (Compound: {compound_score:.2f})\n"
-            summary += f"Positive: {sentiment['pos']:.2f}, Neutral: {sentiment['neu']:.2f}, Negative: {sentiment['neg']:.2f}\n"
-            summary += "Relevant text snippets:\n"
-            for snippet in snippets:
-                summary += f"- \"{snippet}\"\n"
-            summary += "\n"
+        summary = []
         
-        return summary
+        for aspect, sentiment_data in absa_results.items():
+            # Extract sentiment and confidence scores directly as floats
+            sentiment_score = sentiment_data['sentiment']  # This is already a float
+            confidence = sentiment_data['confidence']
+            
+            if sentiment_score > 0.25:
+                sentiment_desc = "positive"
+            elif sentiment_score < -0.25:
+                sentiment_desc = "negative"
+            else:
+                sentiment_desc = "neutral"
+            
+            summary.append(f"The aspect '{aspect}' has a {sentiment_desc} sentiment "
+                        f"with a confidence of {confidence:.2f}.")
+
+        return "\n".join(summary)
+
 # Additional utility function
 @lru_cache(maxsize=1)
 def load_spacy_model(model_name: str):
