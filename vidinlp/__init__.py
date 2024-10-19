@@ -240,59 +240,62 @@ class VidiNLP:
         # Return list of tuples (document index, similarity score)
         return [(idx, cosine_similarities[idx]) for idx in similar_doc_indices]
     
-    def aspect_based_sentiment_analysis(self, text: str) -> Dict[str, Dict[str, Any]]:
+    def aspect_based_sentiment_analysis(self, text: str) -> Dict[str, Dict[str, float]]:
         """
-        Perform aspect-based sentiment analysis on the input text using VADER.
+        Perform aspect-based sentiment analysis on the input text using custom sentiment analysis.
 
         Args:
         text (str): The input text to analyze.
 
         Returns:
         Dict[str, Dict[str, Any]]: A dictionary where keys are aspects and values are dictionaries
-                                   containing sentiment scores and the associated text snippets.
+                                containing sentiment scores, confidence, and the associated text snippet.
         """
         doc = self.nlp(text)
         aspects = defaultdict(list)
 
         # Extract aspects (nouns) and their associated descriptors
         for token in doc:
-            if token.pos_ in ['NOUN', 'PROPN']:
-                # Look for adjectives or verbs connected to the noun
+            if token.pos_ == "NOUN" or token.dep_ == "compound":
                 for child in token.children:
-                    if child.pos_ in ['ADJ', 'VERB']:
-                        aspect = token.text.lower()
-                        descriptor = child.text.lower()
-                        aspects[aspect].append((descriptor, child.i))
+                    if child.dep_ in ["amod", "nsubj", "prep"]:
+                        aspects[token.text].append((child.text, child.i))
 
         # Analyze sentiment for each aspect
         results = {}
         for aspect, descriptors in aspects.items():
             sentiment_scores = []
+            confidence_scores = []
             snippets = []
+
             for descriptor, idx in descriptors:
-                # Get the relevant part of the text (5 words before and after the descriptor)
-                start = max(0, idx - 5)
-                end = min(len(doc), idx + 6)
-                relevant_text = doc[start:end].text
+                # Find the sentence that contains the descriptor token
+                relevant_text = ""
+                for sent in doc.sents:
+                    if doc[idx] in sent:
+                        relevant_text = sent.text
+                        break
+
+                # Analyze sentiment using custom method
+                sentiment_label, confidence = self.analyze_sentiment(relevant_text)
                 
-                # Analyze sentiment using VADER
-                sentiment_scores.append(self.analyze_sentiment(relevant_text))
+                sentiment_scores.append(self._sentiment_to_score(sentiment_label))
+                confidence_scores.append(confidence)
                 snippets.append(relevant_text)
 
-            # Calculate average sentiment for the aspect
-            avg_sentiment = {
-                'compound': sum(score['compound'] for score in sentiment_scores) / len(sentiment_scores),
-                'pos': sum(score['pos'] for score in sentiment_scores) / len(sentiment_scores),
-                'neu': sum(score['neu'] for score in sentiment_scores) / len(sentiment_scores),
-                'neg': sum(score['neg'] for score in sentiment_scores) / len(sentiment_scores)
-            }
+            # Calculate average sentiment and confidence for the aspect
+            avg_sentiment = sum(s * c for s, c in zip(sentiment_scores, confidence_scores)) / sum(confidence_scores)
+
+            avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
 
             results[aspect] = {
                 'sentiment': avg_sentiment,
+                'confidence': avg_confidence,
                 'snippets': snippets
             }
 
         return results
+
 
     def summarize_absa_results(self, results: Dict[str, Dict[str, Any]]) -> str:
         """
