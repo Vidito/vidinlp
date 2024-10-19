@@ -4,3 +4,4 @@ joblib>=1.0.0,<2.0.0
 pandas
 imblearn
 numpy
+gensim-4.3.3

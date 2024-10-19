@@ -11,7 +11,8 @@ setup(
         "joblib",
         "pandas",
         "imblearn",
-        "numpy"
+        "numpy",
+        "gensim-4.3.3"
     ],
     package_data={
         "vidinlp": ["best_sentiment_pipeline_calibrated.joblib", "vectorizer_svm.joblib"],

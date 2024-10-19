@@ -1,6 +1,9 @@
 import spacy
 from typing import List, Tuple, Dict
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+import gensim
+from gensim import corpora
+from sklearn.metrics.pairwise import cosine_similarity
 import joblib
 import os
 from functools import lru_cache
@@ -10,6 +13,9 @@ import re
 class VidiNLP:
     def __init__(self, model="en_core_web_sm", lexicon_path='lexicon.txt'):
         self.nlp = spacy.load(model)
+        # Initialize attributes for topic modeling
+        self.dictionary = None
+        self.lda_model = None
         
         # Load pre-trained sentiment model
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -194,6 +200,65 @@ class VidiNLP:
 
         return dict(sorted(emotion_scores.items(), key=lambda item: item[1], reverse=True))
 
+    def preprocess_for_topic_modeling(self, texts):
+        """Preprocess texts for topic modeling."""
+        processed_texts = []
+        for text in texts:
+            doc = self.nlp(text)
+            processed_texts.append([token.lemma_.lower() for token in doc if not token.is_stop and token.is_alpha])
+        return processed_texts
+
+    def train_topic_model(self, texts, num_topics=5, passes=15):
+        """Train an LDA topic model on the given texts."""
+        processed_texts = self.preprocess_for_topic_modeling(texts)
+        self.dictionary = corpora.Dictionary(processed_texts)
+        corpus = [self.dictionary.doc2bow(text) for text in processed_texts]
+        self.lda_model = gensim.models.LdaMulticore(corpus=corpus, id2word=self.dictionary, num_topics=num_topics, passes=passes)
+
+    def get_topics(self, num_words=10):
+        """Get the topics from the trained LDA model."""
+        if self.lda_model is None:
+            raise ValueError("Topic model has not been trained. Call train_topic_model first.")
+        return self.lda_model.print_topics(num_words=num_words)
+
+    def get_document_topics(self, text):
+        """Get the topic distribution for a given document."""
+        if self.lda_model is None or self.dictionary is None:
+            raise ValueError("Topic model has not been trained. Call train_topic_model first.")
+        
+        processed_text = self.preprocess_for_topic_modeling([text])[0]
+        bow = self.dictionary.doc2bow(processed_text)
+        return self.lda_model.get_document_topics(bow)
+
+    def compute_document_similarity(self, doc1, doc2):
+        """Compute the similarity between two documents using TF-IDF and cosine similarity."""
+        # Preprocess documents
+        preprocessed_docs = [self.clean_text(doc) for doc in [doc1, doc2]]
+        
+        # Create TF-IDF matrix
+        tfidf_matrix = self.tfidf_vectorizer.fit_transform(preprocessed_docs)
+        
+        # Compute cosine similarity
+        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        
+        return similarity
+
+    def find_similar_documents(self, query_doc, document_list, top_n=5):
+        """Find the top N most similar documents to the query document."""
+        # Preprocess all documents including the query
+        preprocessed_docs = [self.clean_text(doc) for doc in [query_doc] + document_list]
+        
+        # Create TF-IDF matrix
+        tfidf_matrix = self.tfidf_vectorizer.fit_transform(preprocessed_docs)
+        
+        # Compute cosine similarity between query and all other documents
+        cosine_similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:]).flatten()
+        
+        # Get indices of top N similar documents
+        similar_doc_indices = cosine_similarities.argsort()[:-top_n-1:-1]
+        
+        # Return list of tuples (document index, similarity score)
+        return [(idx, cosine_similarities[idx]) for idx in similar_doc_indices]
 # Additional utility function
 @lru_cache(maxsize=1)
 def load_spacy_model(model_name: str):
