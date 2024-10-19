@@ -213,7 +213,7 @@ class VidiNLP:
         processed_texts = self.preprocess_for_topic_modeling(texts)
         self.dictionary = corpora.Dictionary(processed_texts)
         corpus = [self.dictionary.doc2bow(text) for text in processed_texts]
-        self.lda_model = gensim.models.LdaMulticore(corpus=corpus, id2word=self.dictionary, num_topics=num_topics, passes=passes)
+        self.lda_model = gensim.models.LdaModel(corpus=corpus, id2word=self.dictionary, num_topics=num_topics, passes=passes)
 
     def get_topics(self, num_words=10):
         """Get the topics from the trained LDA model."""
