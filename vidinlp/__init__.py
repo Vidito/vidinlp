@@ -6,7 +6,6 @@ from gensim import corpora
 from sklearn.metrics.pairwise import cosine_similarity
 from functools import lru_cache
 from collections import Counter, defaultdict
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from vaderSentiment import SentimentIntensityAnalyzer
 
 import re
