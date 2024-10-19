@@ -1,6 +1,10 @@
 # VidiNLP
 
-VidiNLP is a simple, modern, and fast NLP library built on top of spaCy. It provides easy-to-use functions for common NLP tasks such as tokenization, lemmatization, n-gram extraction, sentiment analysis, text cleaning, and keyword extraction.
+VidiNLP is a simple, modern, and fast NLP library built on top of spaCy. It provides easy-to-use functions for common NLP tasks such as tokenization, lemmatization, n-gram extraction, sentiment analysis, text cleaning, keyword extraction, emotion analysis, topic modelling, document similarity.
+
+VidiNLP was built by Dr. Vahid Niamadpour, an applied linguist based in Norway, as a hobby.
+
+For exmotion analysis (not sentiment analusis), VidiNLP makes use of the NRC emotion lexicon, created by [Dr Saif M. Mohammad at the National Research Council Canada.](https://www.saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm) "
 
 ## Installation
 
@@ -43,7 +47,7 @@ entities = nlp.get_named_entities("Apple is looking at buying U.K. startup for $
 # Keyword extraction by using TF-IDF and POS tagging
 keywords = nlp.extract_keywords(text, top_k= 10)
 
-# Analyze emotions in text using NCR Dictionary. Returns dictionary of emotions and their respective scores.
+# Analyze emotions in text using NRC Dictionary. Returns dictionary of emotions and their respective scores.
 emotions = nlp.analyze_emotions(text)
 
 # Topic modelling using Gensim
