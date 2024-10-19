@@ -45,6 +45,20 @@ keywords = nlp.extract_keywords(text, top_k= 10)
 
 # Analyze emotions in text using NCR Dictionary. Returns dictionary of emotions and their respective scores.
 emotions = nlp.analyze_emotions(text)
+
+# Topic modelling using Gensim
+texts = ["Your first document", "Your second document", ...]
+nlp.train_topic_model(texts, num_topics=5)
+topics = nlp.get_topics()
+doc_topics = nlp.get_document_topics("A new document to analyze")
+
+
+# Document Similarity
+# Computes the similarity between two documents using TF-IDF and cosine similarity.
+similarity = nlp.compute_document_similarity("First document", "Second document")
+
+# Finds the top N most similar documents to a query document from a list of documents.
+similar_docs = nlp.find_similar_documents("Query document", ["Doc1", "Doc2", "Doc3"], top_n=2)
 ```
 
 For more detailed usage instructions and examples, please refer to the documentation.
