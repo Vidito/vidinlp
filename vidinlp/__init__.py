@@ -65,17 +65,9 @@ class VidiNLP:
 
         # Predict sentiment label
         sentiment = self.sentiment_pipeline.predict([text])[0]
-        
-        # Get the probability estimates for each class
         probas = self.sentiment_pipeline.predict_proba([text])[0]
-        
-        # Get the confidence score for the predicted sentiment
-        confidence_score = max(probas)  # Highest probability score
-        
-        # Create a readable output
-        result = f"The sentiment is '{sentiment}' with a confidence of {round(confidence_score * 100, 2)}%."
-        
-        return result
+        confidence_score = max(probas)
+        return sentiment, confidence_score
     
 
     def clean_text(self, text: str, is_stop: bool = False, is_alpha: bool = False, is_punct: bool = False, is_num: bool = False, is_html: bool =False) -> str:
@@ -276,13 +268,11 @@ class VidiNLP:
 
         # Extract aspects (nouns) and their associated descriptors
         for token in doc:
-            if token.pos_ in ['NOUN', 'PROPN']:
-                # Look for adjectives or verbs connected to the noun
+            if token.pos_ == "NOUN" or token.dep_ == "compound":
                 for child in token.children:
-                    if child.pos_ in ['ADJ', 'VERB']:
-                        aspect = token.text.lower()
-                        descriptor = child.text.lower()
-                        aspects[aspect].append((descriptor, child.i))
+                    if child.dep_ in ["amod", "nsubj", "prep"]:
+                        aspects[token.text].append(child.text)
+
 
         # Analyze sentiment for each aspect
         results = {}
@@ -292,22 +282,20 @@ class VidiNLP:
             snippets = []
             for descriptor, idx in descriptors:
                 # Get the relevant part of the text (5 words before and after the descriptor)
-                start = max(0, idx - 5)
-                end = min(len(doc), idx + 6)
-                relevant_text = doc[start:end].text
-                
+                for sent in doc.sents:
+                    if token in sent:
+                        relevant_text = sent.text
+                        break
                 # Analyze sentiment using custom method
-                sentiment_result = self.analyze_sentiment(relevant_text)
-                
-                # Parse the sentiment result
-                sentiment_label, confidence = self._parse_sentiment_result(sentiment_result)
+                sentiment_label, confidence = self.analyze_sentiment(relevant_text)
                 
                 sentiment_scores.append(self._sentiment_to_score(sentiment_label))
                 confidence_scores.append(confidence)
                 snippets.append(relevant_text)
 
             # Calculate average sentiment and confidence for the aspect
-            avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0
+            avg_sentiment = sum(s * c for s, c in zip(sentiment_scores, confidence_scores)) / sum(confidence_scores)
+
             avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
 
             results[aspect] = {
@@ -318,14 +306,6 @@ class VidiNLP:
 
         return results
 
-    def _parse_sentiment_result(self, result: str) -> Tuple[str, float]:
-        """Parse the sentiment result string to extract label and confidence."""
-        import re
-        match = re.search(r"sentiment is '(\w+)' with a confidence of ([\d.]+)%", result)
-        if match:
-            label, confidence = match.groups()
-            return label, float(confidence) / 100
-        return "Neutral", 0.0
 
     def _sentiment_to_score(self, sentiment: str) -> float:
         """Convert sentiment label to a numerical score."""
