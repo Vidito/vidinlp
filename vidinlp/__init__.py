@@ -1,5 +1,5 @@
 import spacy
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Any
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import gensim
 from gensim import corpora
