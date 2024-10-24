@@ -55,27 +55,24 @@ class VidiNLP:
         return top_ngrams
     
 
-    def get_tfidf_ngrams(self, text, n=2, top_n=10, filter_stop=True):
+    def get_tfidf_ngrams_corpus(self, corpus, n=2, top_n=10):
         """
-        Extract top n-grams from a given text based on TF-IDF scores.
+        Extract top n-grams from a corpus based on TF-IDF scores.
         
-        :param text: The input text (string).
+        :param corpus: A list of documents (strings) to use as the corpus.
         :param n: The value of 'n' for the n-grams (default is 2 for bigrams).
         :param top_n: The number of top n-grams to return based on TF-IDF score.
         :return: A list of tuples with the top n-grams and their respective TF-IDF scores.
         """
         # Initialize the TF-IDF Vectorizer with n-grams
         tfidf_vectorizer = TfidfVectorizer(ngram_range=(n, n))
-        if filter_stop:        
-            tfidf_vectorizer.stop_words = 'english'
         
+        # Fit and transform the corpus
+        tfidf_matrix = tfidf_vectorizer.fit_transform(corpus)
         
-        # Fit and transform the text
-        tfidf_matrix = tfidf_vectorizer.fit_transform([text])
-        
-        # Get feature names (n-grams) and corresponding scores
+        # Get feature names (n-grams) and corresponding scores for the last document
         feature_names = tfidf_vectorizer.get_feature_names_out()
-        scores = tfidf_matrix.toarray().flatten()
+        scores = tfidf_matrix[-1].toarray().flatten()  # Get scores for the last document
         
         # Create a dictionary of n-grams and their TF-IDF scores
         ngram_scores = dict(zip(feature_names, scores))
@@ -85,6 +82,7 @@ class VidiNLP:
         
         # Return the top n n-grams
         return sorted_ngrams[:top_n]
+
 
 
     
