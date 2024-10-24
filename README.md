@@ -47,7 +47,7 @@ lemmas = nlp.lemmatize(text)
 cleaned_text = nlp.clean_text(text, is_stop = False, is_alpha = False, is_punct = False, is_num = False, is_html = False)
 
 # N-grams. By default the top five bigrams are returned.
-ngrams = nlp.get_ngrams(text, n=2, top_k=5)
+ngrams = nlp.get_ngrams(text, n=2, top_n=5)
 
 # N-grams usind TF-IDF. By default the top five bigrams are returned.
 tfidf_ngrams = nlp.get_tfidf_ngrams(text, n=2, top_n=5)

@@ -55,7 +55,7 @@ class VidiNLP:
         return top_ngrams
     
 
-    def get_tfidf_ngrams(self, text, n=2, top_n=10):
+    def get_tfidf_ngrams(self, text, n=2, top_n=10, filter_stop=True):
         """
         Extract top n-grams from a given text based on TF-IDF scores.
         
@@ -65,7 +65,10 @@ class VidiNLP:
         :return: A list of tuples with the top n-grams and their respective TF-IDF scores.
         """
         # Initialize the TF-IDF Vectorizer with n-grams
-        tfidf_vectorizer = TfidfVectorizer(ngram_range=(n, n), stop_words='english')
+        tfidf_vectorizer = TfidfVectorizer(ngram_range=(n, n))
+        if filter_stop:        
+            tfidf_vectorizer.stop_words = 'english'
+        
         
         # Fit and transform the text
         tfidf_matrix = tfidf_vectorizer.fit_transform([text])
