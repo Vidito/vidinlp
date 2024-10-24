@@ -55,7 +55,7 @@ class VidiNLP:
         return top_ngrams
     
 
-    def get_tfidf_ngrams(text, n=2, top_n=10):
+    def get_tfidf_ngrams(self,text, n=2, top_n=10):
         """
         Extract top n-grams from a given text based on TF-IDF scores.
         
