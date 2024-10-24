@@ -8,6 +8,7 @@ from functools import lru_cache
 from collections import Counter, defaultdict
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
+
 import re
 
 class VidiNLP:
@@ -40,7 +41,7 @@ class VidiNLP:
         doc = self.nlp(text)
         return [(token.text, token.pos_) for token in doc]
     
-    def get_ngrams(self, text: str, n: int, top_k: int = 10) -> List[Tuple[str, int]]:
+    def get_ngrams(self, text: str, n: int, top_n: int = 10) -> List[Tuple[str, int]]:
         """Get top-k n-grams from the input text.
         Args: text: str, n: int, top_k: int = 10
         """
@@ -50,8 +51,39 @@ class VidiNLP:
         ngrams = vectorizer.get_feature_names_out()
         ngram_counts = ngram_matrix.sum(axis=0).A1
         # Ensure integers are properly formatted and use map to convert to native int
-        top_ngrams = sorted(zip(ngrams, map(int, ngram_counts)), key=lambda x: x[1], reverse=True)[:top_k]
+        top_ngrams = sorted(zip(ngrams, map(int, ngram_counts)), key=lambda x: x[1], reverse=True)[:top_n]
         return top_ngrams
+    
+
+    def get_tfidf_ngrams(text, n=2, top_n=10):
+        """
+        Extract top n-grams from a given text based on TF-IDF scores.
+        
+        :param text: The input text (string).
+        :param n: The value of 'n' for the n-grams (default is 2 for bigrams).
+        :param top_n: The number of top n-grams to return based on TF-IDF score.
+        :return: A list of tuples with the top n-grams and their respective TF-IDF scores.
+        """
+        # Initialize the TF-IDF Vectorizer with n-grams
+        tfidf_vectorizer = TfidfVectorizer(ngram_range=(n, n), stop_words='english')
+        
+        # Fit and transform the text
+        tfidf_matrix = tfidf_vectorizer.fit_transform([text])
+        
+        # Get feature names (n-grams) and corresponding scores
+        feature_names = tfidf_vectorizer.get_feature_names_out()
+        scores = tfidf_matrix.toarray().flatten()
+        
+        # Create a dictionary of n-grams and their TF-IDF scores
+        ngram_scores = dict(zip(feature_names, scores))
+        
+        # Sort the n-grams by their scores in descending order
+        sorted_ngrams = sorted(ngram_scores.items(), key=lambda x: x[1], reverse=True)
+        
+        # Return the top n n-grams
+        return sorted_ngrams[:top_n]
+
+
     
     def analyze_sentiment(self, text: str) -> Dict[str, float]:
             """Analyze the sentiment of the input text using VADER."""

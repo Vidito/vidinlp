@@ -49,6 +49,9 @@ cleaned_text = nlp.clean_text(text, is_stop = False, is_alpha = False, is_punct 
 # N-grams. By default the top five bigrams are returned.
 ngrams = nlp.get_ngrams(text, n=2, top_k=5)
 
+# N-grams usind TF-IDF. By default the top five bigrams are returned.
+tfidf_ngrams = nlp.get_tfidf_ngrams(text, n=2, top_n=5)
+
 # Sentiment Analysis (pre-trained model). Example output:
 sentiment = nlp.analyze_sentiment(text)
 print(sentiment) # {'neg': 0.228, 'neu': 0.345, 'pos': 0.427, 'compound': 0.7777}
