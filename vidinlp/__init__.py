@@ -55,7 +55,7 @@ class VidiNLP:
         return top_ngrams
     
 
-    def get_tfidf_ngrams_corpus(self, corpus, n=2, top_n=10):
+    def get_tfidf_ngrams_corpus(self, corpus, n=2, top_n=10, filter_stop=False):
         """
         Extract top n-grams from a corpus based on TF-IDF scores.
         
@@ -66,6 +66,8 @@ class VidiNLP:
         """
         # Initialize the TF-IDF Vectorizer with n-grams
         tfidf_vectorizer = TfidfVectorizer(ngram_range=(n, n))
+        if filter_stop:
+            tfidf_vectorizer.set_params(stop_words='english')
         
         # Fit and transform the corpus
         tfidf_matrix = tfidf_vectorizer.fit_transform(corpus)
