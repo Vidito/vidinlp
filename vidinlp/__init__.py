@@ -90,8 +90,6 @@ class VidiNLP:
         # Return the top n n-grams
         return sorted_ngrams[:top_n]
 
-
-
     
     def analyze_sentiment(self, text: str) -> Dict[str, float]:
             """Analyze the sentiment of the input text using VADER."""
