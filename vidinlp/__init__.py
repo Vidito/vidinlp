@@ -7,24 +7,29 @@ from sklearn.metrics.pairwise import cosine_similarity
 from functools import lru_cache
 from collections import Counter, defaultdict
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
-
 import re
+import pandas as pd
+import numpy as np
 
 class VidiNLP:
-    def __init__(self, model="en_core_web_sm", lexicon_path='lexicon.txt'):
+    def __init__(self, model="en_core_web_sm", lexicon_path='lexicon.txt', easy_word_list = 'chall_word_list.txt'):
         self.nlp = spacy.load(model)
         self.sia = SentimentIntensityAnalyzer()
         # Initialize attributes for topic modeling
         self.dictionary = None
         self.lda_model = None
+        self.easy_words = self.load_easy_word_list(easy_word_list)
         
-
         # Initialize TF-IDF vectorizer for keyword extraction
         self.tfidf_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1, 2))
         
         # Load NRC Emotion Lexicon for emotion detection
         self.emotion_lexicon = self.load_nrc_emotion_lexicon(lexicon_path)
+
+    def load_easy_word_list(self, file_path):
+        with open(file_path, 'r') as file:
+            easy_word_list = [line.strip() for line in file]
+        return easy_word_list
         
     def tokenize(self, text: str) -> List[str]:
         """Tokenize the input text and returns a list of tokens."""
@@ -340,8 +345,6 @@ class VidiNLP:
         return results
 
 
-
-
     def summarize_absa_results(self, absa_results: Dict[str, Dict[str, float]]) -> str:
         """
         Summarize the aspect-based sentiment analysis results into a human-readable format.
@@ -370,7 +373,180 @@ class VidiNLP:
                         f"with a confidence of {confidence:.2f}.")
 
         return "\n".join(summary)
+    
+    def detect_linguistic_patterns(self, text: str) -> Dict[str, Any]:
+        """
+        Detect various linguistic patterns in the text.
+        """
+        doc = self.nlp(text)
+        
+        patterns = {
+            'passive_voice': [],
+            'complex_sentences': [],
+            'conditionals': []
+        }
+        
+        for sent in doc.sents:
+            # Detect passive voice
+            if any(token.dep_ == 'nsubjpass' for token in sent):
+                patterns['passive_voice'].append(sent.text)
+            
+            # Detect complex sentences (multiple clauses)
+            if len([token for token in sent if token.dep_ == 'mark']) > 1:
+                patterns['complex_sentences'].append(sent.text)
+            
+            
+            # Detect conditional statements
+            if any(
+                token.text.lower() in {'if', 'unless', 'whether'} 
+                for token in sent
+            ):
+                patterns['conditionals'].append(sent.text)
+        
+        return patterns
+    
+    def analyze_text_structure(self, text: str) -> Dict[str, Any]:
+      """
+      Analyze the structural elements of the text and provide insights 
+      into syntax, lexical diversity, readability, and coherence.
 
+      Returns:
+          Dictionary containing detailed structural analysis
+      """
+      doc = self.nlp(text)
+      
+      # Sentence analysis
+      sentences = list(doc.sents)
+      sentence_lengths = [len(sent) for sent in sentences]
+      
+      # Paragraph detection
+      paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+      paragraph_lengths = [len(p.split()) for p in paragraphs]
+      
+      # Discourse markers
+      discourse_markers = [
+          token.text for token in doc 
+          if token.dep_ == 'mark' or token.text.lower() in 
+          {'however', 'therefore', 'thus', 'moreover', 'furthermore'}
+      ]
+      
+      # Lexical diversity
+      words = [token.text.lower() for token in doc if token.is_alpha]
+      unique_words = set(words)
+      lexical_diversity = len(unique_words) / len(words) if words else 0
+            
+      # Part of speech tags distribution
+      pos_counts = Counter([token.pos_ for token in doc])
+      
+      # Sentence complexity (simple, compound, complex)
+      complex_sentence_count = sum(
+          1 for sent in sentences 
+          if any(token.dep_ == 'mark' for token in sent)
+      )
+      
+      return {
+          'num_sentences': len(sentences),
+          'avg_sentence_length': np.mean(sentence_lengths),
+          'num_paragraphs': len(paragraphs),
+          'avg_paragraph_length': np.mean(paragraph_lengths) if paragraph_lengths else 0,
+          'sentence_length_distribution': {
+              'min': min(sentence_lengths),
+              'max': max(sentence_lengths),
+              'std': np.std(sentence_lengths),
+          },
+          'subordinating_conjunctions': set(discourse_markers),
+          'lexical_diversity': lexical_diversity,
+          'pos_distribution': dict(pos_counts),
+          'complex_sentence_ratio': complex_sentence_count / len(sentences) if sentences else 0
+      }
+    
+    def analyze_readability(self, text: str) -> Dict[str, float]:
+        """
+        Calculate readability metrics including the Dale-Chall score.
+        """
+        doc = self.nlp(text)
+
+        # Basic counts
+        words = [token.text.lower() for token in doc if not token.is_punct]
+        word_count = len(words)
+        sentence_count = len(list(doc.sents))
+        syllable_count = sum(self._count_syllables(word) for word in words)
+
+        # Check for sentences
+        if sentence_count == 0:
+            return {'error': 'No sentences found in text'}
+
+        # Calculate metrics
+        avg_words_per_sentence = word_count / sentence_count
+        avg_syllables_per_word = syllable_count / word_count if word_count > 0 else 0
+
+        # Flesch Reading Ease
+        flesch = 206.835 - 1.015 * avg_words_per_sentence - 84.6 * avg_syllables_per_word
+
+        # Gunning Fog Index
+        complex_words = len([word for word in words if self._count_syllables(word) >= 3])
+        fog_index = 0.4 * (avg_words_per_sentence + 100 * (complex_words / word_count))
+
+        # Dale-Chall Score
+        difficult_words = sum(1 for word in words if word not in self.easy_words)
+        difficult_word_ratio = difficult_words / word_count if word_count > 0 else 0
+        dale_chall_score = (
+            0.1579 * (difficult_word_ratio * 100) + 0.0496 * avg_words_per_sentence
+        )
+        if difficult_word_ratio > 0.05:
+            dale_chall_score += 3.6365
+
+        return {
+            'flesch_reading_ease': round(flesch, 2),
+            'gunning_fog_index': round(fog_index, 2),
+            'dale_chall_score': round(dale_chall_score, 2),
+            'avg_words_per_sentence': round(avg_words_per_sentence, 2),
+            'avg_syllables_per_word': round(avg_syllables_per_word, 2),
+            'complex_word_ratio': round(complex_words / word_count, 3)
+        }
+    @staticmethod
+    def _count_syllables(word: str) -> int:
+        """Helper method to count syllables in a word."""
+        word = word.lower()
+        count = 0
+        vowels = 'aeiouy'
+        if word[0] in vowels:
+            count += 1
+        for index in range(1, len(word)):
+            if word[index] in vowels and word[index - 1] not in vowels:
+                count += 1
+        if word.endswith('e'):
+            count -= 1
+        if count == 0:
+            count += 1
+        return count
+    
+    def export_analysis(self, text: str, format: str = 'json'):
+        """
+        Export comprehensive text analysis in various formats.
+        """
+        # Perform all analyses
+        analysis = {
+            'basic_stats': {
+                'word_count': len(self.tokenize(text)),
+                'sentence_count': len(list(self.nlp(text).sents))
+            },
+            'sentiment': self.analyze_sentiment(text),
+            'emotions': self.analyze_emotions(text),
+            'keywords': self.extract_keywords(text),
+            'readability': self.analyze_readability(text),
+            'linguistic_patterns': self.detect_linguistic_patterns(text),
+            'named_entities': self.get_named_entities(text)
+        }
+        
+        if format == 'json':
+            return analysis
+        elif format == 'csv':
+            return pd.DataFrame.from_dict(analysis, orient='index').to_csv()
+        elif format == 'dataframe':
+            return pd.DataFrame.from_dict(analysis, orient='index')
+        else:
+            raise ValueError(f"Unsupported format: {format}")
 # Additional utility function
 @lru_cache(maxsize=1)
 def load_spacy_model(model_name: str):
