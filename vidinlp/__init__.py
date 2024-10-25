@@ -1,5 +1,5 @@
 import spacy
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import gensim
 from gensim import corpora
@@ -12,24 +12,87 @@ import pandas as pd
 import numpy as np
 
 class VidiNLP:
-    def __init__(self, model="en_core_web_sm", lexicon_path='lexicon.txt', easy_word_list = 'chall_word_list.txt'):
-        self.nlp = spacy.load(model)
+    def __init__(self, model="en_core_web_sm", lexicon_path: Optional[str] = None, easy_word_list: Optional[str] = None):
+        """
+        Initialize VidiNLP with improved file handling.
+        
+        Args:
+            model (str): Name of the spaCy model to load
+            lexicon_path (str, optional): Path to the lexicon file
+            easy_word_list (str, optional): Path to the Dale-Chall word list
+        """
+        try:
+            self.nlp = spacy.load(model)
+        except OSError:
+            raise OSError(f"SpaCy model '{model}' not found. Please install it using: python -m spacy download {model}")
+
         self.sia = SentimentIntensityAnalyzer()
-        # Initialize attributes for topic modeling
         self.dictionary = None
         self.lda_model = None
-        self.easy_words = self.load_easy_word_list(easy_word_list)
         
-        # Initialize TF-IDF vectorizer for keyword extraction
+        # Set default paths relative to the current file's location
+        current_dir = Path(__file__).parent
+        default_lexicon = current_dir / 'data' / 'lexicon.txt'
+        default_word_list = current_dir / 'data' / 'chall_word_list.txt'
+        
+        # Try loading the word list
+        try:
+            self.easy_words = self.load_easy_word_list(
+                easy_word_list if easy_word_list else default_word_list
+            )
+        except FileNotFoundError as e:
+            print(f"Warning: Could not find word list file. Creating empty word list. Error: {e}")
+            self.easy_words = []
+            
+        # Initialize TF-IDF vectorizer
         self.tfidf_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1, 2))
         
-        # Load NRC Emotion Lexicon for emotion detection
-        self.emotion_lexicon = self.load_nrc_emotion_lexicon(lexicon_path)
+        # Try loading the emotion lexicon
+        try:
+            self.emotion_lexicon = self.load_nrc_emotion_lexicon(
+                lexicon_path if lexicon_path else default_lexicon
+            )
+        except FileNotFoundError as e:
+            print(f"Warning: Could not find lexicon file. Creating empty lexicon. Error: {e}")
+            self.emotion_lexicon = {}
 
-    def load_easy_word_list(self, file_path):
-        with open(file_path, 'r') as file:
-            easy_word_list = [line.strip() for line in file]
-        return easy_word_list
+    @staticmethod
+    def load_easy_word_list(file_path: str | Path) -> List[str]:
+        """Load the Dale-Chall easy word list with better error handling."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                return [line.strip().lower() for line in file if line.strip()]
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"Could not find the word list file at {file_path}. "
+                "Please ensure the file exists in the correct location or provide the correct path."
+            )
+        except Exception as e:
+            raise Exception(f"Error reading word list file: {e}")
+
+    @staticmethod
+    def load_nrc_emotion_lexicon(lexicon_path: str | Path) -> Dict[str, Dict[str, int]]:
+        """Load the NRC Emotion Lexicon with better error handling."""
+        try:
+            lexicon = {}
+            with open(lexicon_path, 'r', encoding='utf-8') as file:
+                for line in file:
+                    try:
+                        word, emotion, score = line.strip().split('\t')
+                        if word not in lexicon:
+                            lexicon[word] = {}
+                        lexicon[word][emotion] = int(score)
+                    except ValueError:
+                        print(f"Warning: Skipping malformed line in lexicon: {line.strip()}")
+                        continue
+            return lexicon
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"Could not find the lexicon file at {lexicon_path}. "
+                "Please ensure the file exists in the correct location or provide the correct path."
+            )
+        except Exception as e:
+            raise Exception(f"Error reading lexicon file: {e}")
         
     def tokenize(self, text: str) -> List[str]:
         """Tokenize the input text and returns a list of tokens."""
@@ -178,24 +241,6 @@ class VidiNLP:
         
         return top_keywords
     
-    def load_nrc_emotion_lexicon(self, lexicon_path: str) -> Dict[str, Dict[str, int]]:
-        """
-        Load the NRC Emotion Lexicon into a dictionary.
-
-        Args:
-        lexicon_path (str): Path to the NRC Emotion Lexicon file.
-
-        Returns:
-        Dict[str, Dict[str, int]]: A dictionary mapping words to emotions and their respective scores (1 or 0).
-        """
-        lexicon = {}
-        with open(lexicon_path, 'r') as file:
-            for line in file:
-                word, emotion, score = line.strip().split('\t')
-                if word not in lexicon:
-                    lexicon[word] = {}
-                lexicon[word][emotion] = int(score)
-        return lexicon
 
     def analyze_emotions(self, text: str) -> Dict[str, int]:
         """
