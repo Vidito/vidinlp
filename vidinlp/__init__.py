@@ -566,32 +566,70 @@ class VidiNLP:
             count += 1
         return count
     
-    def export_analysis(self, text: str, format: str = 'json'):
+    def export_analysis(self, text: str, format: str = 'json') -> Union[str, Dict, pd.DataFrame]:
         """
         Export comprehensive text analysis in various formats.
+        
+        Args:
+            text (str): The text to analyze
+            format (str): Output format - 'json', 'csv', or 'dataframe'
+            
+        Returns:
+            Union[str, Dict, pd.DataFrame]: Analysis results in the specified format
         """
-        # Perform all analyses
+        # Convert analysis results to dictionary format
         analysis = {
             'basic_stats': {
                 'word_count': len(self.tokenize(text)),
                 'sentence_count': len(list(self.nlp(text).sents))
             },
             'sentiment': self.analyze_sentiment(text),
-            'emotions': self.analyze_emotions(text),
-            'keywords': self.extract_keywords(text),
+            'emotions': {
+                emotion: score 
+                for emotion, score in self.analyze_emotions(text).items()
+            },
+            'keywords': {
+                f'keyword_{i+1}': {
+                    'text': kw[0],
+                    'score': float(kw[1])
+                }
+                for i, kw in enumerate(self.extract_advanced_keywords(text))
+            },
             'readability': self.analyze_readability(text),
-            'linguistic_patterns': self.detect_linguistic_patterns(text),
-            'named_entities': self.get_named_entities(text)
+            'linguistic_patterns': {
+                pattern_type: len(patterns)
+                for pattern_type, patterns in self.detect_linguistic_patterns(text).items()
+            },
+            'named_entities': {
+                f'entity_{i+1}': {
+                    'text': ent[0],
+                    'label': ent[1]
+                }
+                for i, ent in enumerate(self.get_named_entities(text))
+            }
         }
         
-        if format == 'json':
-            return analysis
-        elif format == 'csv':
-            return pd.DataFrame.from_dict(analysis, orient='index').to_csv()
-        elif format == 'dataframe':
-            return pd.DataFrame.from_dict(analysis, orient='index')
-        else:
-            raise ValueError(f"Unsupported format: {format}")
+        # Flatten nested dictionaries for DataFrame conversion
+        if format in ['csv', 'dataframe']:
+            flattened_data = {}
+            for category, values in analysis.items():
+                if isinstance(values, dict):
+                    for key, value in values.items():
+                        if isinstance(value, dict):
+                            for subkey, subvalue in value.items():
+                                flattened_data[f"{category}_{key}_{subkey}"] = subvalue
+                        else:
+                            flattened_data[f"{category}_{key}"] = value
+                else:
+                    flattened_data[category] = values
+                    
+            df = pd.DataFrame([flattened_data])
+            
+            if format == 'csv':
+                return df.to_csv(index=False)
+            return df
+        
+        return analysis
 # Additional utility function
 @lru_cache(maxsize=1)
 def load_spacy_model(model_name: str):
