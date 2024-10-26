@@ -220,18 +220,27 @@ print(readability)
 
 ```python
 # Analyze text structure
-structure = nlp.analyze_text_structure(
-    "This is a sentence. This is another one.\n\nThis is a new paragraph."
-)
+structure = nlp.analyze_text_structure(text)
 print(structure)
 # Output: {
-#     'num_sentences': 3,
-#     'avg_sentence_length': 4.33,
+#     'num_sentences': 33,
+#     'avg_sentence_length': 10.33,
+#     'sentence_length_variability': {'variance': 730.9917355371902, 'iqr': 37.5},
 #     'num_paragraphs': 2,
 #     'avg_paragraph_length': 5.5,
+#     'paragraph_length_variability': {'variance': 1600.0, 'iqr': 40.0},
+#     'discourse_markers': {'Although'},
+#     'pronoun_reference_ratio': 0.027777777777777776,
 #     'lexical_diversity': 0.76,
+#     'pos_distribution': {'ADP': 63, 'DET': 45, 'ADJ': 46,},
+#     'noun_verb_ratio': 4.0,
+#     'noun_adj_ratio': 2.0,
+#     'sentence_type_distribution': {'simple': 1, 'compound': 9, 'complex': 0, 'compound_complex': 1},
 #     'complex_sentence_ratio': 0.0
 # }
+#  Higher variance indicates more variation in sentence lengths
+# IQR focuses on the typical variation, ignoring extreme outliers. Measures the range where the middle 50% of the sentence lengths fall
+
 # Analyze text patterns
 structure = nlp.detect_linguistic_patterns(
     "The words have been spoken. If they answer, I will talk."
