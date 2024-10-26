@@ -451,59 +451,84 @@ class VidiNLP:
         return patterns
     
     def analyze_text_structure(self, text: str) -> Dict[str, Any]:
-      """
-      Analyze the structural elements of the text and provide insights 
-      into syntax, lexical diversity, readability, and coherence.
+        """
+        Analyze the structural elements of the text and provide insights 
+        into syntax, lexical diversity, coherence, and complexity.
 
-      Returns:
-          Dictionary containing detailed structural analysis
-      """
-      doc = self.nlp(text)
-      
-      # Sentence analysis
-      sentences = list(doc.sents)
-      sentence_lengths = [len(sent) for sent in sentences]
-      
-      # Paragraph detection
-      paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
-      paragraph_lengths = [len(p.split()) for p in paragraphs]
-      
-      # Discourse markers
-      discourse_markers = [
-          token.text for token in doc 
-          if token.dep_ == 'mark' or token.text.lower() in 
-          {'however', 'therefore', 'thus', 'moreover', 'furthermore'}
-      ]
-      
-      # Lexical diversity
-      words = [token.text.lower() for token in doc if token.is_alpha]
-      unique_words = set(words)
-      lexical_diversity = len(unique_words) / len(words) if words else 0
-            
-      # Part of speech tags distribution
-      pos_counts = Counter([token.pos_ for token in doc])
-      
-      # Sentence complexity (simple, compound, complex)
-      complex_sentence_count = sum(
-          1 for sent in sentences 
-          if any(token.dep_ == 'mark' for token in sent)
-      )
-      
-      return {
-          'num_sentences': len(sentences),
-          'avg_sentence_length': np.mean(sentence_lengths),
-          'num_paragraphs': len(paragraphs),
-          'avg_paragraph_length': np.mean(paragraph_lengths) if paragraph_lengths else 0,
-          'sentence_length_distribution': {
-              'min': min(sentence_lengths),
-              'max': max(sentence_lengths),
-              'std': np.std(sentence_lengths),
-          },
-          'subordinating_conjunctions': set(discourse_markers),
-          'lexical_diversity': lexical_diversity,
-          'pos_distribution': dict(pos_counts),
-          'complex_sentence_ratio': complex_sentence_count / len(sentences) if sentences else 0
-      }
+        Returns:
+            Dictionary containing detailed structural analysis
+        """
+        doc = self.nlp(text)
+        
+        # Sentence analysis
+        sentences = list(doc.sents)
+        sentence_lengths = [len(sent) for sent in sentences]
+
+        # Paragraph detection
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        paragraph_lengths = [len(p.split()) for p in paragraphs]
+
+        # Discourse markers and connectives
+        discourse_markers = [
+            token.text for token in doc 
+            if token.dep_ == 'mark' or token.text.lower() in 
+            {'however', 'therefore', 'thus', 'moreover', 'furthermore', 'in conclusion', 'as a result'}
+        ]
+
+        # Lexical diversity
+        words = [token.text.lower() for token in doc if token.is_alpha]
+        unique_words = set(words)
+        lexical_diversity = len(unique_words) / len(words) if words else 0
+        
+        # Pronoun reference analysis
+        pronoun_references = [token.text.lower() for token in doc if token.pos_ == "PRON"]
+        pronoun_ratio = len(pronoun_references) / len(words) if words else 0
+
+        
+
+        # POS tag distribution
+        pos_counts = Counter([token.pos_ for token in doc])
+
+        # Noun-Verb-Adjective Ratios
+        noun_count = pos_counts['NOUN']
+        verb_count = pos_counts['VERB']
+        adj_count = pos_counts['ADJ']
+        noun_verb_ratio = noun_count / verb_count if verb_count > 0 else 0
+        noun_adj_ratio = noun_count / adj_count if adj_count > 0 else 0
+
+        # Sentence complexity (simple, compound, complex, compound-complex)
+        simple_sentences = sum(1 for sent in sentences if not any(token.dep_ == 'mark' or token.pos_ == 'CCONJ' for token in sent))
+        compound_sentences = sum(1 for sent in sentences if any(token.pos_ == 'CCONJ' for token in sent) and not any(token.dep_ == 'mark' for token in sent))
+        complex_sentences = sum(1 for sent in sentences if any(token.dep_ == 'mark' for token in sent) and not any(token.pos_ == 'CCONJ' for token in sent))
+        compound_complex_sentences = sum(1 for sent in sentences if any(token.dep_ == 'mark' for token in sent) and any(token.pos_ == 'CCONJ' for token in sent))
+
+        return {
+            'num_sentences': len(sentences),
+            'avg_sentence_length': np.mean(sentence_lengths),
+            'sentence_length_variability': {
+                'variance': np.var(sentence_lengths),
+                'iqr': np.percentile(sentence_lengths, 75) - np.percentile(sentence_lengths, 25)
+            },
+            'num_paragraphs': len(paragraphs),
+            'avg_paragraph_length': np.mean(paragraph_lengths) if paragraph_lengths else 0,
+            'paragraph_length_variability': {
+                'variance': np.var(paragraph_lengths),
+                'iqr': np.percentile(paragraph_lengths, 75) - np.percentile(paragraph_lengths, 25)
+            },
+            'discourse_markers': set(discourse_markers),
+            'pronoun_reference_ratio': pronoun_ratio,
+            'lexical_diversity': lexical_diversity,
+            'pos_distribution': dict(pos_counts),
+            'noun_verb_ratio': round(noun_verb_ratio, 2),
+            'noun_adj_ratio': round(noun_adj_ratio, 2),
+            'sentence_type_distribution': {
+                'simple': simple_sentences,
+                'compound': compound_sentences,
+                'complex': complex_sentences,
+                'compound_complex': compound_complex_sentences
+            },
+            'complex_sentence_ratio': (complex_sentences + compound_complex_sentences) / len(sentences) if sentences else 0
+        }
     
     def analyze_readability(self, text: str) -> Dict[str, float]:
         doc = self.nlp(text)

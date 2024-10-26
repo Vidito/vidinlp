@@ -201,12 +201,18 @@ readability = nlp.analyze_readability(
 )
 print(readability)
 # Output: {
-#     'flesch_reading_ease': 84.32,
-#     'gunning_fog_index': 6.8,
-#     'dale_chall_score': 5.4,
-#     'avg_words_per_sentence': 9.0,
+#     'flesch_reading_ease': 97.0,
+#     'gunning_fog_index': 2.8,
+#     'dale_chall_score': 5.1,
+#     'avg_words_per_sentence': 7.0,
 #     'avg_syllables_per_word': 1.2,
-#     'complex_word_ratio': 0.111
+#     'complex_word_ratio': 0.0,
+#     'lexical_density': 0.571,
+#     'type_token_ratio': 0.929,
+#     'avg_word_length': 3.93,
+#     'named_entity_ratio': 0.0,
+#     'verb_noun_ratio': 0.33,
+#     'avg_sentence_length_syllables': 8.5
 # }
 ```
 
@@ -242,7 +248,7 @@ print(structure)
 # Identify named entities
 ner = nlp.get_named_entities('Norway is a big country!')
 print(ner)
-# Output: [('Iran', 'GPE')]
+# Output: [('Norway', 'GPE')]
 ```
 
 ### Export Functionality
@@ -252,11 +258,9 @@ print(ner)
 # JSON format
 analysis_json = nlp.export_analysis(text, format='json')
 
-# CSV format
-analysis_csv = nlp.export_analysis(text, format='csv')
-
 # Pandas DataFrame
 analysis_df = nlp.export_analysis(text, format='dataframe')
+analysis_df.to_csv('analysis.csv', index=False)
 ```
 
 ## Contributing
