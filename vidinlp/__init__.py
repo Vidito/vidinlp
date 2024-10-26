@@ -571,11 +571,11 @@ class VidiNLP:
         Export comprehensive text analysis in various formats.
         
         Args:
-            text (str): The text to analyze
-            format (str): Output format - 'json', 'csv', or 'dataframe'
+            text (str): The text to analyze.
+            format (str): Output format - 'json' or 'dataframe'.
             
         Returns:
-            Union[str, Dict, pd.DataFrame]: Analysis results in the specified format
+            Union[str, Dict, pd.DataFrame]: Analysis results in the specified format.
         """
         # Convert analysis results to dictionary format
         analysis = {
@@ -608,28 +608,39 @@ class VidiNLP:
                 for i, ent in enumerate(self.get_named_entities(text))
             }
         }
-        
+
         # Flatten nested dictionaries for DataFrame conversion
-        if format in ['csv', 'dataframe']:
-            flattened_data = {}
+        if format == 'dataframe':
+            flattened_data = []
             for category, values in analysis.items():
                 if isinstance(values, dict):
                     for key, value in values.items():
                         if isinstance(value, dict):
                             for subkey, subvalue in value.items():
-                                flattened_data[f"{category}_{key}_{subkey}"] = subvalue
+                                flattened_data.append({
+                                    'category': category,
+                                    'key': f"{key}_{subkey}",
+                                    'value': subvalue
+                                })
                         else:
-                            flattened_data[f"{category}_{key}"] = value
+                            flattened_data.append({
+                                'category': category,
+                                'key': key,
+                                'value': value
+                            })
                 else:
-                    flattened_data[category] = values
-                    
-            df = pd.DataFrame([flattened_data])
-            
-            if format == 'csv':
-                return df.to_csv(index=False)
+                    flattened_data.append({
+                        'category': category,
+                        'key': '',
+                        'value': values
+                    })
+
+            df = pd.DataFrame(flattened_data)
             return df
-        
+
+        # Return JSON format
         return analysis
+
 # Additional utility function
 @lru_cache(maxsize=1)
 def load_spacy_model(model_name: str):
