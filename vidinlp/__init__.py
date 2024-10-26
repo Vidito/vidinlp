@@ -593,7 +593,7 @@ class VidiNLP:
                     'text': kw[0],
                     'score': float(kw[1])
                 }
-                for i, kw in enumerate(self.extract_advanced_keywords(text))
+                for i, kw in enumerate(self.extract_keywords(text))
             },
             'readability': self.analyze_readability(text),
             'linguistic_patterns': {
