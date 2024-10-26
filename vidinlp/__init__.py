@@ -506,9 +506,6 @@ class VidiNLP:
       }
     
     def analyze_readability(self, text: str) -> Dict[str, float]:
-        """
-        Calculate readability metrics including the Dale-Chall score.
-        """
         doc = self.nlp(text)
 
         # Basic counts
@@ -517,22 +514,17 @@ class VidiNLP:
         sentence_count = len(list(doc.sents))
         syllable_count = sum(self._count_syllables(word) for word in words)
 
-        # Check for sentences
         if sentence_count == 0:
             return {'error': 'No sentences found in text'}
 
-        # Calculate metrics
         avg_words_per_sentence = word_count / sentence_count
         avg_syllables_per_word = syllable_count / word_count if word_count > 0 else 0
 
-        # Flesch Reading Ease
+        # Readability scores
         flesch = 206.835 - 1.015 * avg_words_per_sentence - 84.6 * avg_syllables_per_word
-
-        # Gunning Fog Index
         complex_words = len([word for word in words if self._count_syllables(word) >= 3])
         fog_index = 0.4 * (avg_words_per_sentence + 100 * (complex_words / word_count))
-
-        # Dale-Chall Score
+        
         difficult_words = sum(1 for word in words if word not in self.easy_words)
         difficult_word_ratio = difficult_words / word_count if word_count > 0 else 0
         dale_chall_score = (
@@ -541,14 +533,39 @@ class VidiNLP:
         if difficult_word_ratio > 0.05:
             dale_chall_score += 3.6365
 
+        # Additional metrics
+        content_words = [token for token in doc if token.pos_ in {"NOUN", "VERB", "ADJ", "ADV"}]
+        lexical_density = len(content_words) / word_count if word_count > 0 else 0
+
+        unique_words = set(words)
+        type_token_ratio = len(unique_words) / word_count if word_count > 0 else 0
+
+        avg_word_length = sum(len(word) for word in words) / word_count if word_count > 0 else 0
+
+        named_entities = [ent.text for ent in doc.ents]
+        named_entity_ratio = len(named_entities) / word_count if word_count > 0 else 0
+
+        verbs = [token for token in doc if token.pos_ == "VERB"]
+        nouns = [token for token in doc if token.pos_ == "NOUN"]
+        verb_noun_ratio = len(verbs) / len(nouns) if len(nouns) > 0 else 0
+
+        avg_sentence_length_syllables = syllable_count / sentence_count if sentence_count > 0 else 0
+
         return {
             'flesch_reading_ease': round(flesch, 2),
             'gunning_fog_index': round(fog_index, 2),
             'dale_chall_score': round(dale_chall_score, 2),
             'avg_words_per_sentence': round(avg_words_per_sentence, 2),
             'avg_syllables_per_word': round(avg_syllables_per_word, 2),
-            'complex_word_ratio': round(complex_words / word_count, 3)
+            'complex_word_ratio': round(complex_words / word_count, 3),
+            'lexical_density': round(lexical_density, 3),
+            'type_token_ratio': round(type_token_ratio, 3),
+            'avg_word_length': round(avg_word_length, 2),
+            'named_entity_ratio': round(named_entity_ratio, 3),
+            'verb_noun_ratio': round(verb_noun_ratio, 2),
+            'avg_sentence_length_syllables': round(avg_sentence_length_syllables, 2)
         }
+
     @staticmethod
     def _count_syllables(word: str) -> int:
         """Helper method to count syllables in a word."""
