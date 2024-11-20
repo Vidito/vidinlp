@@ -8,15 +8,11 @@ setup(
     install_requires=[
         "spacy",
         "scikit-learn",
-        "joblib",
         "pandas",
-        "imblearn",
         "numpy",
-        "gensim-4.3.3",
         "vaderSentiment"
     ],
     package_data={
-        "vidinlp": ["best_sentiment_pipeline_calibrated.joblib", "vectorizer_svm.joblib"],
     },
     author="Vahid Niamadpour",
     author_email="contact@pythonology.eu",
