@@ -153,25 +153,29 @@ print(keywords)
 ```
 
 ### Topic Modeling
-
+Perform Latent Dirichlet Allocation (LDA) topic modeling on a corpus of texts.
+Extracts underlying topics by identifying co-occurring word groups across documents.
 ```python
-# Train topic model
-texts = [
-    "Machine learning is fascinating",
-    "AI and deep learning are revolutionary",
-    "Data science uses statistical methods"
-]
-nlp.train_topic_model(texts, num_topics=2)
+# topic model
+documents = [
+        "Machine learning is revolutionizing artificial intelligence",
+        "Deep learning models improve computer vision tasks",
+        "Natural language processing enables advanced text analysis"
+        ]
+topics =  nlp.topic_modelling( texts, num_topics = 5, min_df = 2, max_df = 0.95, min_word_length = 3)
 
-# Get topics
-topics = nlp.get_topics(num_words=3)
-print(topics)
-# Output: [(0, 'learning machine deep'), (1, 'data science statistical')]
+for topic in topics:
+        print(topic)
+# Args:
+#         texts (List[str]): Collection of text documents to analyze
+#         num_topics (int, optional): Number of topics to extract. Defaults to 5.
+#         min_df (int, optional): Minimum document frequency for terms. Defaults to 2.
+#         max_df (float, optional): Maximum document frequency for terms. Defaults to 0.95.
+#         min_word_length (int, optional): Minimum word length to consider. Defaults to 3.
+    
+#     Returns:
+#         List of dictionaries containing top keywords for each extracted topic
 
-# Get document topics
-doc_topics = nlp.get_document_topics("AI and machine learning")
-print(doc_topics)
-# Output: [(0, 0.85), (1, 0.15)]
 ```
 
 ### Document Similarity
