@@ -421,32 +421,143 @@ class VidiNLP:
     
     def detect_linguistic_patterns(self, text: str) -> Dict[str, Any]:
         """
-        Detect various linguistic patterns in the text.
+        Detect various linguistic patterns in the text including voice, sentence types,
+        modality, and rhetorical devices.
+
+        Args:
+            text: Input text for analysis
+
+        Returns:
+            Dictionary containing detected patterns categorized by type
         """
         doc = self.nlp(text)
         
         patterns = {
-            'passive_voice': [],
-            'complex_sentences': [],
-            'conditionals': []
+            'voice': {
+                'passive': [],
+                'active': []
+            },
+            'sentence_structure': {
+                'simple': [],
+                'complex': [],
+                'compound': [],
+                'compound_complex': []
+            },
+            'modality': {
+                'conditionals': [],
+                'hypotheticals': [],
+                'imperatives': [],
+                'subjunctive': []
+            },
+            'cohesion_devices': {
+                'temporal_markers': [],
+                'causal_markers': [],
+                'contrastive_markers': []
+            }
         }
         
+        # Pattern matching rules
+        modal_verbs = {'could', 'would', 'should', 'might', 'may', 'must', 'can'}
+        temporal_markers = {'when', 'while', 'before', 'after', 'during', 'then'}
+        causal_markers = {'because', 'therefore', 'thus', 'hence', 'consequently'}
+        contrastive_markers = {'however', 'although', 'but', 'yet', 'nevertheless'}
+        
         for sent in doc.sents:
-            # Detect passive voice
-            if any(token.dep_ == 'nsubjpass' for token in sent):
-                patterns['passive_voice'].append(sent.text)
+            sent_text = sent.text.strip()
+            verb_phrase = ''
+            subject = ''
             
-            # Detect complex sentences (multiple clauses)
-            if len([token for token in sent if token.dep_ == 'mark']) > 1:
-                patterns['complex_sentences'].append(sent.text)
+            # Voice detection with context
+            has_passive = False
+            has_active = False
+            for token in sent:
+                # Build verb phrase for better context
+                if token.dep_ in {'aux', 'auxpass', 'ROOT'} and token.pos_ == 'VERB':
+                    verb_phrase += token.text + ' '
+                # Track subject for voice determination
+                if token.dep_ in {'nsubj', 'nsubjpass'}:
+                    subject = token.text
+                    
+                if token.dep_ == 'nsubjpass':
+                    has_passive = True
+                elif token.dep_ == 'nsubj' and not has_passive:
+                    has_active = True
             
+            if has_passive:
+                patterns['voice']['passive'].append({
+                    'text': sent_text,
+                    'subject': subject.strip(),
+                    'verb_phrase': verb_phrase.strip()
+                })
+            elif has_active:
+                patterns['voice']['active'].append({
+                    'text': sent_text,
+                    'subject': subject.strip(),
+                    'verb_phrase': verb_phrase.strip()
+                })
             
-            # Detect conditional statements
-            if any(
-                token.text.lower() in {'if', 'unless', 'whether'} 
-                for token in sent
-            ):
-                patterns['conditionals'].append(sent.text)
+            # Enhanced sentence structure detection
+            clause_markers = [token for token in sent if token.dep_ == 'mark']
+            coordinators = [token for token in sent if token.dep_ == 'cc']
+            
+            if len(clause_markers) == 0 and len(coordinators) == 0:
+                patterns['sentence_structure']['simple'].append(sent_text)
+            elif len(clause_markers) > 0 and len(coordinators) == 0:
+                patterns['sentence_structure']['complex'].append(sent_text)
+            elif len(clause_markers) == 0 and len(coordinators) > 0:
+                patterns['sentence_structure']['compound'].append(sent_text)
+            elif len(clause_markers) > 0 and len(coordinators) > 0:
+                patterns['sentence_structure']['compound_complex'].append(sent_text)
+            
+            # Enhanced modality detection
+            tokens_lower = [token.text.lower() for token in sent]
+            
+            # Conditional patterns
+            if any(token in {'if', 'unless', 'whether'} for token in tokens_lower):
+                patterns['modality']['conditionals'].append(sent_text)
+            
+            # Hypothetical patterns
+            if any(token in modal_verbs for token in tokens_lower):
+                patterns['modality']['hypotheticals'].append(sent_text)
+            
+            # Imperative patterns
+            if (sent[0].pos_ == 'VERB' and sent[0].tag_ == 'VB') or \
+            (len(sent) > 1 and sent[0].text.lower() == 'please' and sent[1].pos_ == 'VERB'):
+                patterns['modality']['imperatives'].append(sent_text)
+            
+            # Subjunctive patterns
+            if any(token.text.lower() in {'wish', 'if only', 'as if', 'would that'} for token in sent):
+                patterns['modality']['subjunctive'].append(sent_text)
+            
+            # Cohesion devices
+            if any(marker in tokens_lower for marker in temporal_markers):
+                patterns['cohesion_devices']['temporal_markers'].append(sent_text)
+                
+            if any(marker in tokens_lower for marker in causal_markers):
+                patterns['cohesion_devices']['causal_markers'].append(sent_text)
+                
+            if any(marker in tokens_lower for marker in contrastive_markers):
+                patterns['cohesion_devices']['contrastive_markers'].append(sent_text)
+        
+        # Add pattern statistics
+        patterns['statistics'] = {
+            'voice_distribution': {
+                'passive_count': len(patterns['voice']['passive']),
+                'active_count': len(patterns['voice']['active'])
+            },
+            'sentence_structure_distribution': {
+                category: len(sentences) 
+                for category, sentences in patterns['sentence_structure'].items()
+            },
+            'modality_distribution': {
+                category: len(sentences) 
+                for category, sentences in patterns['modality'].items()
+            },
+            'cohesion_device_distribution': {
+                category: len(sentences) 
+                for category, sentences in patterns['cohesion_devices'].items()
+            }
+        }
         
         return patterns
     
