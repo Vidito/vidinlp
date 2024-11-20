@@ -10,7 +10,6 @@ setup(
         "scikit-learn",
         "pandas",
         "numpy",
-        "gensim-4.3.3",
         "vaderSentiment"
     ],
     package_data={
