@@ -3,8 +3,7 @@ from pathlib import Path
 import spacy
 from typing import List, Tuple, Dict, Any, Optional, Union
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-import gensim
-from gensim import corpora
+from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.metrics.pairwise import cosine_similarity
 from functools import lru_cache
 from collections import Counter, defaultdict
@@ -265,35 +264,70 @@ class VidiNLP:
 
         return dict(sorted(emotion_scores.items(), key=lambda item: item[1], reverse=True))
 
-    def preprocess_for_topic_modeling(self, texts):
-        """Preprocess texts for topic modeling."""
+    def topic_modelling(
+        self,
+        texts: List[str], 
+        num_topics: int = 5,
+        min_df: int = 2,
+        max_df: float = 0.95,
+        min_word_length: int = 3
+    ) -> List[Dict[str, float]]:
+        """
+        Perform advanced topic modeling on text corpus.
+        
+        Args:
+            texts: List of input text documents
+            num_topics: Number of topics to extract
+            min_df: Minimum document frequency for terms
+            max_df: Maximum document frequency for terms
+            min_word_length: Minimum length of words to consider
+        
+        Returns:
+            List of topics with keywords and their weights
+        """
         processed_texts = []
         for text in texts:
             doc = self.nlp(text)
-            processed_texts.append([token.lemma_.lower() for token in doc if not token.is_stop and token.is_alpha])
-        return processed_texts
-
-    def train_topic_model(self, texts, num_topics=5, passes=15):
-        """Train an LDA topic model on the given texts."""
-        processed_texts = self.preprocess_for_topic_modeling(texts)
-        self.dictionary = corpora.Dictionary(processed_texts)
-        corpus = [self.dictionary.doc2bow(text) for text in processed_texts]
-        self.lda_model = gensim.models.LdaModel(corpus=corpus, id2word=self.dictionary, num_topics=num_topics, passes=passes)
-
-    def get_topics(self, num_words=10):
-        """Get the topics from the trained LDA model."""
-        if self.lda_model is None:
-            raise ValueError("Topic model has not been trained. Call train_topic_model first.")
-        return self.lda_model.print_topics(num_words=num_words)
-
-    def get_document_topics(self, text):
-        """Get the topic distribution for a given document."""
-        if self.lda_model is None or self.dictionary is None:
-            raise ValueError("Topic model has not been trained. Call train_topic_model first.")
+            processed_texts.append(' '.join([
+                token.lemma_.lower() 
+                for token in doc 
+                if (not token.is_stop and 
+                    token.is_alpha and 
+                    len(token.lemma_) >= min_word_length)
+            ]))
+    
+        vectorizer = CountVectorizer(
+            stop_words='english',
+            min_df=min_df,
+            max_df=max_df
+        )
+        doc_term_matrix = vectorizer.fit_transform(processed_texts)
         
-        processed_text = self.preprocess_for_topic_modeling([text])[0]
-        bow = self.dictionary.doc2bow(processed_text)
-        return self.lda_model.get_document_topics(bow)
+        lda = LatentDirichletAllocation(
+            n_components=num_topics, 
+            random_state=42,
+            max_iter=15,
+            learning_method='online'
+        )
+        lda_output = lda.fit_transform(doc_term_matrix)
+        
+        feature_names = vectorizer.get_feature_names_out()
+        topics = []
+        
+        for topic_idx, topic in enumerate(lda.components_):
+            top_features_ind = topic.argsort()[:-10 - 1:-1]
+            top_features = [
+                {
+                    'keyword': feature_names[i], 
+                    'weight': topic[i]
+                } 
+                for i in top_features_ind
+            ]
+            topics.append({
+                f'Topic_{topic_idx+1}': top_features
+            })
+        
+        return topics
 
     def compute_document_similarity(self, doc1, doc2):
         """Compute the similarity between two documents using TF-IDF and cosine similarity."""

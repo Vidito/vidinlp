@@ -8,10 +8,9 @@ setup(
     install_requires=[
         "spacy",
         "scikit-learn",
-        "joblib",
         "pandas",
         "numpy",
-        "gensim",
+        "gensim-4.3.3",
         "vaderSentiment"
     ],
     package_data={
