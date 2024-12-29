@@ -1,16 +1,1 @@
 Free for All. Use As Is.
-mynlplib/
-│
-├── mynlplib/              # Package directory
-│   ├── __init__.py        # Makes it a Python package
-│   ├── tokenization.py    # Tokenization module
-│   ├── lemmatization.py   # Lemmatization module
-│   ├── ngram.py           # N-gram module
-│   ├── sentiment_analysis.py # Sentiment analysis module
-│   ├── classification.py  # Naive Bayes classification module
-│   ├── utils.py           # Utility functions (e.g., text preprocessing)
-├── tests/                 # Directory for unit tests
-│   └── test_mynlplib.py
-├── setup.py               # Script for package configuration
-├── README.md              # Documentation
-└── LICENSE                # License (optional but recommended)
