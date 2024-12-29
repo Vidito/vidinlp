@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vidinlp",
-    version="0.1.1",
+    version="1.0.0",
     packages=find_packages(),
     install_requires=[
         "spacy>=3.0.0,<4.0.0",

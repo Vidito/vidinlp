@@ -1,6 +1,6 @@
 # VidiNLP Library
 
-VidiNLP is a comprehensive Natural Language Processing (NLP) library that combines various text analysis capabilities including sentiment analysis, topic modeling, readability assessment, and more. Built on top of spaCy, scikit-learn, and other powerful NLP tools, VidiNLP provides an easy-to-use interface for advanced text analysis.
+VidiNLP is a simple Natural Language Processing (NLP) library that combines various text analysis capabilities including sentiment analysis, topic modeling, readability assessment, and more. Built on top of spaCy, scikit-learn, and vaderSentiment, VidiNLP provides an easy-to-use interface for advanced text analysis.
 
 For emotion analysis (not sentiment analysis), VidiNLP makes use of the NRC emotion lexicon, created by [Dr Saif M. Mohammad at the National Research Council Canada.](https://www.saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm)"
 
@@ -23,10 +23,7 @@ For emotion analysis (not sentiment analysis), VidiNLP makes use of the NRC emot
 
 ```bash
 # First install the required dependencies
-
-git clone https://github.com/Vidito/vidinlp.git
-cd vidinlp
-pip install .
+pip install vidinlp
 
 
 # Download the spaCy model
@@ -37,7 +34,6 @@ python -m spacy download en_core_web_sm
 
 - spacy
 - scikit-learn
-- gensim
 - vaderSentiment
 - numpy
 - pandas
@@ -87,7 +83,7 @@ print(pos_tags)
 ```python
 # Clean text with various filters
 cleaned = nlp.clean_text(
-    "Hello! This is a test123... <p>with HTML</p>",
+    "Hello! This is a test 123... <p>with HTML</p>",
     is_stop=True,      # Remove stop words
     is_punct=True,     # Remove punctuation
     is_num=True,       # Remove numbers
@@ -139,6 +135,11 @@ print(nlp.summarize_absa_results(absa))
 ngrams = nlp.get_ngrams("The quick brown fox jumps over the lazy dog", n=2, top_n=3)
 print(ngrams)
 # Output: [('quick brown', 1), ('brown fox', 1), ('fox jumps', 1)]
+corpus = [
+        "Machine learning is revolutionizing artificial intelligence",
+        "Deep learning models improve computer vision tasks",
+        "Natural language processing enables advanced text analysis"
+        ]
 tfidf_ngrams = nlp.get_tfidf_ngrams_corpus(corpus, n=2, top_n=10, filter_stop=False)
 # give it a list o texts as corpus
 ```
@@ -153,8 +154,10 @@ print(keywords)
 ```
 
 ### Topic Modeling
+
 Perform Latent Dirichlet Allocation (LDA) topic modeling on a corpus of texts.
 Extracts underlying topics by identifying co-occurring word groups across documents.
+
 ```python
 # topic model
 documents = [
@@ -162,7 +165,7 @@ documents = [
         "Deep learning models improve computer vision tasks",
         "Natural language processing enables advanced text analysis"
         ]
-topics =  nlp.topic_modelling( texts, num_topics = 5, min_df = 2, max_df = 0.95, min_word_length = 3)
+topics =  nlp.topic_modelling( documents, num_topics = 5, min_df = 2, max_df = 0.95, min_word_length = 3)
 
 for topic in topics:
         print(topic)
@@ -172,7 +175,7 @@ for topic in topics:
 #         min_df (int, optional): Minimum document frequency for terms. Defaults to 2.
 #         max_df (float, optional): Maximum document frequency for terms. Defaults to 0.95.
 #         min_word_length (int, optional): Minimum word length to consider. Defaults to 3.
-    
+
 #     Returns:
 #         List of dictionaries containing top keywords for each extracted topic
 
@@ -187,7 +190,7 @@ similarity = nlp.compute_document_similarity(
     "AI is amazing"
 )
 print(similarity)
-# Output: 0.42
+# Output: 0.0
 
 # Find similar documents
 docs = ["AI is great", "Machine learning is cool", "Python programming"]
