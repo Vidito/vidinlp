@@ -3,6 +3,9 @@ from pathlib import Path
 import spacy
 from typing import List, Tuple, Dict, Any, Optional, Union
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.metrics.pairwise import cosine_similarity
 from functools import lru_cache
@@ -30,6 +33,8 @@ class VidiNLP:
         self.sia = SentimentIntensityAnalyzer()
         self.dictionary = None
         self.lda_model = None
+        self.vectorizer = None
+        self.classifier = None
         
         # Set default paths relative to the current file's location
         current_dir = Path(__file__).parent
@@ -827,6 +832,66 @@ class VidiNLP:
 
         # Return JSON format
         return analysis
+
+    # Adding a classifier based on Naive Bayes
+
+    def train_text_classifier(self, csv_path, text_column, label_column, split_ratio=0.8):
+        """
+        Train a Naive Bayes text classifier.
+
+        Parameters:
+        csv_path (str): Path to the CSV dataset.
+        text_column (str): Column containing text data.
+        label_column (str): Column containing labels.
+        split_ratio (float): Ratio of training to testing data.
+        """
+        # Load data
+        try:
+            data = pd.read_csv(csv_path)
+        except Exception as e:
+            raise ValueError(f"Error reading CSV file: {e}")
+
+        # Validate columns
+        if text_column not in data.columns or label_column not in data.columns:
+            raise ValueError(f"Columns '{text_column}' or '{label_column}' not found in the dataset.")
+
+        # Split data
+        X = data[text_column]
+        y = data[label_column]
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1 - split_ratio, random_state=42)
+
+        # Preprocessing and vectorization
+        self.vectorizer = TfidfVectorizer()
+        X_train_tfidf = self.vectorizer.fit_transform(X_train)
+        X_test_tfidf = self.vectorizer.transform(X_test)
+
+        # Train classifier
+        self.classifier = MultinomialNB()
+        self.classifier.fit(X_train_tfidf, y_train)
+
+        # Evaluate
+        y_pred = self.classifier.predict(X_test_tfidf)
+        print("Model Accuracy:", accuracy_score(y_test, y_pred))
+        print("Classification Report:\n", classification_report(y_test, y_pred))
+
+        print("Model trained successfully!")
+
+    def predict_text(self, text):
+        """
+        Predict the class of a given text using the trained classifier.
+
+        Parameters:
+        text (str): Input text to classify.
+
+        Returns:
+        str: Predicted label.
+        """
+        if not self.classifier or not self.vectorizer:
+            raise ValueError("Model not trained. Please train the model first.")
+
+        # Preprocess and predict
+        text_tfidf = self.vectorizer.transform([text])
+        return self.classifier.predict(text_tfidf)[0]
 
 # Additional utility function
 @lru_cache(maxsize=1)

@@ -17,6 +17,8 @@ For emotion analysis (not sentiment analysis), VidiNLP makes use of the NRC emot
   - [Document Similarity](#document-similarity)
   - [Readability Analysis](#readability-analysis)
   - [Text Structure Analysis](#text-structure-analysis)
+  - [Named Entity Recognition](#named-entity-recognition)
+  - [Text Classification](#text-classification)
   - [Export Functionality](#export-functionality)
 
 ## Installation
@@ -258,7 +260,7 @@ print(structure)
 # }
 ```
 
-### Name Entity Recognition
+### Named Entity Recognition
 
 ```python
 # Identify named entities
@@ -267,10 +269,37 @@ print(ner)
 # Output: [('Norway', 'GPE')]
 ```
 
+### Text Classification
+
+```python
+# Users can train a Naive Bayes classifier on their own dataset and use it for predictions.
+# The texts should be provided in a CSV file (encoding='utf-8') with a text column and a label column.
+# Training the Model:
+from vidinlp import VidiNLP
+
+# Initialize VidiNLP
+nlp = VidiNLP()
+
+# Train the model
+nlp = VidiNLP()
+nlp.train_text_classifier(
+    csv_path="spam_ham.csv",
+    text_column="text",
+    label_column="label",
+    split_ratio=0.8
+)
+
+# Predicting Text Class
+predicted_label = nlp.predict_text("Hey what's up?")
+print(predicted_label)
+
+```
+
 ### Export Functionality
 
 ```python
-# Export complete analysis in different formats
+# This functioonality needs improvement
+# Export analysis in different formats
 # JSON format
 analysis_json = nlp.export_analysis(text, format='json')
 
