@@ -211,7 +211,7 @@ class VidiNLP:
         remove_emojis: bool = False,
     ) -> str:
         """Clean and preprocess the input text with optional filters.
-        Args: is_stop: bool = False, is_alpha: bool = False, is_punct: bool = False, is_num: bool = False, is_html: bool = False
+        Args: remove_stop_words: bool = False, remove_none_alpha: bool = False, remove_punctuations: bool = False, remove_html: bool = False, remove_urls: bool = False, remove_emojis: bool = False, remove_numbers: bool = False
         """
         # Early return for empty input
         if not text.strip():
@@ -262,13 +262,13 @@ class VidiNLP:
         doc = self.nlp(text)
         return [(ent.text, ent.label_) for ent in doc.ents]
 
-    def extract_keywords(self, text: str, top_k: int = 10) -> List[Tuple[str, float]]:
+    def extract_keywords(self, text: str, top_n: int = 10) -> List[Tuple[str, float]]:
         """
         Extract keywords from the input text using TF-IDF and POS tagging.
 
         Args:
         text (str): The input text to extract keywords from.
-        top_k (int): The number of top keywords to return.
+        top_n (int): The number of top keywords to return.
 
         Returns:
         List[Tuple[str, float]]: A list of tuples containing keywords and their scores, rounded to 2 decimal points.
@@ -310,7 +310,7 @@ class VidiNLP:
             [(word, round(float(score), 2)) for word, score in combined_scores.items()],
             key=lambda x: x[1],
             reverse=True,
-        )[:top_k]
+        )[:top_n]
 
         return top_keywords
 
@@ -573,10 +573,72 @@ class VidiNLP:
         }
 
         # Pattern matching rules
-        modal_verbs = {"could", "would", "should", "might", "may", "must", "can"}
-        temporal_markers = {"when", "while", "before", "after", "during", "then"}
-        causal_markers = {"because", "therefore", "thus", "hence", "consequently"}
-        contrastive_markers = {"however", "although", "but", "yet", "nevertheless"}
+        modal_verbs = {
+            "can",
+            "could",
+            "may",
+            "might",
+            "shall",
+            "should",
+            "will",
+            "would",
+            "must",
+            "ought",
+            "need",
+            "dare",
+            "used to",
+            "have to",
+            "has to",
+            "had to",
+        }
+
+        temporal_markers = {
+            "when",
+            "while",
+            "before",
+            "after",
+            "since",
+            "as soon as",
+            "once",
+            "until",
+            "by the time",
+            "during",
+            "then",
+            "eventually",
+            "meanwhile",
+            "later",
+            "soon",
+        }
+
+        causal_markers = {
+            "because",
+            "as",
+            "since",
+            "so",
+            "therefore",
+            "thus",
+            "hence",
+            "consequently",
+            "as a result",
+            "due to",
+            "owing to",
+            "that’s why",
+        }
+
+        contrastive_markers = {
+            "but",
+            "however",
+            "although",
+            "though",
+            "even though",
+            "yet",
+            "still",
+            "nevertheless",
+            "nonetheless",
+            "in contrast",
+            "whereas",
+            "on the other hand",
+        }
 
         for sent in doc.sents:
             sent_text = sent.text.strip()
@@ -641,10 +703,12 @@ class VidiNLP:
                 patterns["modality"]["hypotheticals"].append(sent_text)
 
             # Imperative patterns
-            if (sent[0].pos_ == "VERB" and sent[0].tag_ == "VB") or (
-                len(sent) > 1
-                and sent[0].text.lower() == "please"
-                and sent[1].pos_ == "VERB"
+            if (
+                (sent[0].pos_ == "VERB" and sent[0].tag_ == "VB")
+                or (sent[0].text.lower() == "please" and sent[1].pos_ == "VERB")
+                or (sent[0].text.lower() == "don't" and sent[1].pos_ == "VERB")
+                or (sent[0].text.lower() == "never" and sent[1].pos_ == "VERB")
+                or (sent[0].text.lower() == "always" and sent[1].pos_ == "VERB")
             ):
                 patterns["modality"]["imperatives"].append(sent_text)
 

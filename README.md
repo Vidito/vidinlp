@@ -83,16 +83,19 @@ print(pos_tags)
 #### Text Cleaning
 
 ```python
-# Clean text with various filters
+# Clean text with various filters. By default they are all False
 cleaned = nlp.clean_text(
-    "Hello! This is a test 123... <p>with HTML</p>",
-    is_stop=True,      # Remove stop words
-    is_punct=True,     # Remove punctuation
-    is_num=True,       # Remove numbers
-    is_html=True       # Remove HTML tags
+    "Hello! This is a test 123... <p> with HTML </p>",
+    remove_stop_words=True,      # Remove stop words
+    remove_none_alpha=True,     # Remove non-alphabetical words
+    remove_punctuations=True,       # Remove punctuations
+    remove_numbers=True,       # Remove numbers
+    remove_html=True,       # Remove HTML
+    remove_urls=True,       # Remove URLs
+    remove_emojis=True       # Remove EMOJIs
 )
 print(cleaned)
-# Output: "hello test html"
+# Output: "hello test HTML"
 ```
 
 ### Sentiment and Emotion Analysis
@@ -133,10 +136,11 @@ print(nlp.summarize_absa_results(absa))
 #### N-gram Analysis
 
 ```python
-# Get top bigrams
-ngrams = nlp.get_ngrams("The quick brown fox jumps over the lazy dog", n=2, top_n=3)
+# Get top n-grams. Uses Pyhton collections Counter class for fast processing
+ngrams = nlp.get_ngrams("The quick brown fox jumps over the lazy dog", n=2, top_n=3, lowercase=True, ignore_punct=True)
 print(ngrams)
 # Output: [('quick brown', 1), ('brown fox', 1), ('fox jumps', 1)]
+# If you want to get the TFIDF (important n-grams) in a corpus:
 corpus = [
         "Machine learning is revolutionizing artificial intelligence",
         "Deep learning models improve computer vision tasks",
@@ -150,7 +154,7 @@ tfidf_ngrams = nlp.get_tfidf_ngrams_corpus(corpus, n=2, top_n=10, filter_stop=Fa
 
 ```python
 # Extract keywords using TF-IDF
-keywords = nlp.extract_keywords("Machine learning is a subset of artificial intelligence", top_k=3)
+keywords = nlp.extract_keywords("Machine learning is a subset of artificial intelligence", top_n=3)
 print(keywords)
 # Output: [('machine learning', 0.42), ('artificial intelligence', 0.38), ('subset', 0.20)]
 ```
