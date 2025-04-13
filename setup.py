@@ -6,11 +6,11 @@ setup(
     version="1.1.0",
     packages=find_packages(),
     install_requires=[
-        "spacy>=3.0.0,<4.0.0",
-        "scikit-learn>=0.24.0,<2.0.0",
-        "pandas>=1.0.0,<2.0.0",
-        "numpy>=1.19.0,<2.0.0",
-        "vaderSentiment>=3.3.2,<4.0.0",
+        "spacy>=3.0.0",
+        "scikit-learn>=0.24.0",
+        "pandas>=1.0.0",
+        "numpy>=1.19.0",
+        "vaderSentiment>=3.3.2",
     ],
     package_data={
         "vidinlp": ["data/*.txt"],  # Include all .txt files in the `data` folder
