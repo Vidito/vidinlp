@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vidinlp",
-    version="1.1.0",
+    version="1.1.1",
     packages=find_packages(),
     install_requires=[
         "spacy>=3.0.0",
@@ -17,7 +17,7 @@ setup(
     },
     author="Vahid Niamadpour",
     author_email="contact@pythonology.eu",
-    description="A simple NLP library built on top of spaCy, Scikit-Learn, and vadersentiment.",
+    description="NLP library for linguists built on top of spaCy, Scikit-Learn, and vadersentiment.",
     long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/vidito/vidinlp",
@@ -26,5 +26,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.9",
 )
